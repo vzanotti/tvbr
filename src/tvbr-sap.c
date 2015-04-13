@@ -2,7 +2,7 @@
  * tvbr-sap.c :  SAPserver thread
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-sap.c 827 2006-11-07 23:10:23Z vinz2 $
+ * $Id: tvbr-sap.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  * Inspired from:
@@ -39,13 +39,13 @@ unsigned int sap_message_count = 0;
 /**
  *  Registering SAP messages
  */
-int sap_register (int card, sap_channel *channel)
+int sap_register (int card, const sap_channel *channel)
 {
 	sap_message *message;
 	int written;
 	unsigned int header_size;
 	char src_ip[TVBR_IPSTR_SIZE], dst_ip[TVBR_IPSTR_SIZE];
-	char *media_type;
+	const char *media_type;
 
 	assert (card >= 0);
 	assert (card < DVB_MAX_DEVS);
@@ -129,7 +129,7 @@ int sap_register (int card, sap_channel *channel)
 		free (message);
 		return -1;
 	}
-	if (written >= (SAP_MESSAGE_LENGTH - header_size))
+	if (written >= (SAP_MESSAGE_LENGTH - (int)header_size))
 	{
 		log_error("SAP/SDP message is too long (%d bytes)", written + header_size);
 		free (message);
@@ -220,7 +220,7 @@ void *sap_main (void *d)
 	sout.sin_addr = addr;
 
 	/* Main loop */
-	while (1)
+	for (;;)
 	{
 		/* sleep time */
 		pthread_mutex_lock (&sap_messages_mutex);

@@ -2,7 +2,7 @@
  * tvbr.h :  TVBR headers
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr.h 887 2006-12-14 02:28:24Z vinz2 $
+ * $Id: tvbr.h 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -23,6 +23,10 @@
 
 #ifndef _TVBR_H
 #define _TVBR_H
+
+#ifndef __GNUC__
+#  define  __attribute__(x)  /* */
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -50,10 +54,6 @@
  *  Logging headers
  */
 #define LOG_STRERROR_BUFLEN 256
-void log_debug (const char *format, ...);
-void log_info (const char *format, ...);
-void log_warn (const char *format, ...);
-void log_error (const char *format, ...);
 
 /**
  *  Logging global vars & locks
@@ -124,7 +124,7 @@ typedef enum {
 	DVB_DVB_C
 } dvb_card_type;
 
-int dvb_fd_init (dvb_fd *fd, dvb_tune *tune, int card, int npids, uint16_t *pids);
+int dvb_fd_init (dvb_fd *fd, const dvb_tune *tune, int card, int npids, const uint16_t *pids);
 void dvb_fd_destroy (dvb_fd *fd);
 void dvb_cleanup_fd (void *data);
 dvb_card_type dvb_type (int card);
@@ -241,7 +241,7 @@ typedef struct {
 	unsigned int buffered;
 	unsigned char udpbuffer[STREAM_UDP_PACKETSIZE];
 	uint16_t pids[DVB_MAX_PIDS];
-	
+
 	uint8_t ts_continuity;
 
 	int fd_udp;
@@ -292,18 +292,18 @@ extern pthread_mutex_t sap_status_mutex;
 extern tvbr_mainstatus sap_status;
 
 void *sap_main (void *);
-int sap_register (int card, sap_channel *channel);
-int sap_unregister (int card);
+int sap_register (int, const sap_channel *);
+int sap_unregister (int);
 
 /**
  *  Config headers
  */
 #define CONFIG_DEFAULT_PORT	1234
 #define CONFIG_DEFAULT_TTL	10
-int config_cards (const char *cards);
-int config_channels ();
-int config_streams (const char *host);
-int config_apply ();
-void config_cleanup ();
+int config_cards (const char *);
+int config_channels (void);
+int config_streams (const char *);
+int config_apply (void);
+void config_cleanup (void);
 
 #endif

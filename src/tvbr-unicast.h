@@ -2,7 +2,7 @@
  * tvbr-unicast.h :  TV-Unicaster headers
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-unicast.h 913 2007-01-14 18:44:57Z vinz2 $
+ * $Id: tvbr-unicast.h 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -23,6 +23,10 @@
 
 #ifndef _TVBR_UNICAST_H
 #define _TVBR_UNICAST_H
+
+#ifndef __GNUC__
+#  define  __attribute__(x)  /* */
+#endif
 
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -140,9 +144,9 @@ int ipc_decode (const unsigned char *, const int, ipc_packet *);
 int ipc_encode_headers (ipc_packet *, ipc_packet_type);
 int ipc_encode_packet (ipc_packet *, unsigned char *);
 int ipc_encode_noop (ipc_packet *, unsigned char *);
-int ipc_encode_access_request (ipc_packet *, unsigned char *, uint32_t, char *);
-int ipc_encode_access_accept (ipc_packet *, unsigned char *, char *, unsigned int);
-int ipc_encode_access_deny (ipc_packet *, unsigned char *, char *, int);
+int ipc_encode_access_request (ipc_packet *, unsigned char *, uint32_t, const char *);
+int ipc_encode_access_accept (ipc_packet *, unsigned char *, const char *, unsigned int);
+int ipc_encode_access_deny (ipc_packet *, unsigned char *, const char *, int);
 int ipc_encode_connection_get (ipc_packet *, unsigned char *);
 int ipc_encode_urllist_get (ipc_packet *, unsigned char *, uint32_t);
 int ipc_encode_bwlist_get (ipc_packet *, unsigned char *, uint32_t);
@@ -150,8 +154,8 @@ int ipc_encode_list_answer_url (ipc_packet *);
 int ipc_encode_list_answer_bw (ipc_packet *);
 int ipc_encode_list_answer_conn (ipc_packet *);
 int ipc_encode_answer (ipc_packet *packet, unsigned char *, uint32_t);
-int ipc_encode_urllist_add (ipc_packet *, unsigned char *, char *, char *, unsigned int);
-int ipc_encode_bwlist_add (ipc_packet *, unsigned char *, char *, unsigned int, unsigned int, unsigned int, unsigned int);
-int ipc_encode_connlist_add (ipc_packet *, unsigned char *, unsigned int, char *, unsigned int);
+int ipc_encode_urllist_add (ipc_packet *, unsigned char *, const char *, const char *, unsigned int);
+int ipc_encode_bwlist_add (ipc_packet *, unsigned char *, const char *, unsigned int, unsigned int, unsigned int, unsigned int);
+int ipc_encode_connlist_add (ipc_packet *, unsigned char *, unsigned int, const char *, unsigned int);
 
 #endif

@@ -2,7 +2,7 @@
  * tvbr-unicast-server.c :  TV-Unicaster Control
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-unicast-server.c 917 2007-01-15 00:29:26Z vinz2 $
+ * $Id: tvbr-unicast-server.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -24,7 +24,7 @@
 #include "tvbr-unicast.h"
 
 /**
- *  Configuration
+ *  Parameters
  */
 #define CONFIG_BUFFER_SIZE		1024
 
@@ -32,6 +32,14 @@
 #define UNICAST_MAX_GROUPS		64
 #define UNICAST_MAX_GROUP_PER_ACL	8
 #define UNICAST_MAX_ACL			64
+
+#define IPC_DATA_TIMEOUT	1
+#define IPC_KEEPALIVE		10
+#define IPC_CONNECTIONS		20
+
+/**
+ *  Structure definitions
+ */
 typedef struct {
 	char name[IPC_GROUP_LENGTH];
 	char url[IPC_URL_LENGTH];
@@ -67,12 +75,8 @@ typedef struct {
 } config_token;
 
 /**
- *  Global vars
+ *  Global variables
  */
-#define IPC_DATA_TIMEOUT	1
-#define IPC_KEEPALIVE		10
-#define IPC_CONNECTIONS		20
-
 int verbosity = 0;
 int ipc_socket;
 int ipc_sockets[IPC_CONNECTIONS];
@@ -89,7 +93,26 @@ unicast_bwgroup unicast_bw[UNICAST_MAX_GROUPS];
 int unicast_acl_count;
 unicast_acl unicast_acls[UNICAST_MAX_ACL];
 
-void compute_acl_limits ();
+/**
+ *  Prototypes
+ */
+inline void log_do (const int, const char *, const char *, va_list)
+		__attribute__((format(printf,3,0)));
+
+void terminate_socket_noacl (int);
+void terminate_socket (int );
+
+void cleanup_handler (void);
+void signal_handler (int)
+		__attribute__((noreturn));
+
+inline char *next_token (config_token *);
+inline char *first_token (config_token *, char *);
+
+int load_config (const char *config_file);
+void compute_acl_limits (void);
+
+void usage (void);
 
 /**
  *  Logging function
@@ -157,7 +180,9 @@ void terminate_socket_noacl (int i)
 	gettimeofday(&now, NULL);
 
 	addr.s_addr = ipc_ips[i];
-	log_info("terminating request for url=%s, ip=%s (duration: %d seconds)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"), now.tv_sec - ipc_start[i].tv_sec);
+	log_info("terminating request for url=%s, ip=%s (duration: %ld seconds)",
+		   ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"),
+		   now.tv_sec - ipc_start[i].tv_sec);
 
 	shutdown (ipc_sockets[i], SHUT_RDWR);
 	close (ipc_sockets[i]);
@@ -275,7 +300,7 @@ inline char *first_token (config_token *tok, char *str)
 	return next_token (tok);
 }
 
-int load_config (char *config_file)
+int load_config (const char *config_file)
 {
 	FILE *fd;
 	config_token tok;
@@ -802,7 +827,7 @@ int main (int argc, char **argv)
 	unicast_acl_count = 0;
 
 	/* Parameters */
-	while (1)
+	for (;;)
 	{
 		char c = getopt_long(argc, argv, "hvqc:d", longopts, NULL);
 		if (c < 0)
@@ -916,7 +941,7 @@ int main (int argc, char **argv)
 	}
 
 	/* Main loop */
-	while (1)
+	for (;;)
 	{
 		fd_set rfds;
 		int maxsocket;
@@ -1057,14 +1082,14 @@ int main (int argc, char **argv)
 
 									if (u == unicast_channel_count)
 									{
-										char *denial = "Requested channel was not found in the database.";
+										const char *denial = "Requested channel was not found in the database.";
 										if (!ipc_encode_access_deny(&ipc_packet, ipc_buffer, denial, 404))
 										{
 											log_error("Unable to build AccessDeny packet, aborting");
 											cleanup_handler ();
 											exit (0);
 										}
-										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 										{
 											terminate_socket (i);
 										}
@@ -1094,7 +1119,7 @@ int main (int argc, char **argv)
 											continue;
 										if (ipc_ips[j] == host_ip)
 										{
-											char *denial = "Your IP is already receiving one channel; you can only receive one channel at a time.";
+											const char *denial = "Your IP is already receiving one channel; you can only receive one channel at a time.";
 											int socket = (disconnect ? j : i);
 											if (!ipc_encode_access_deny(&ipc_packet, ipc_buffer, denial, 403))
 											{
@@ -1102,7 +1127,7 @@ int main (int argc, char **argv)
 												cleanup_handler ();
 												exit (0);
 											}
-											if (send(ipc_sockets[socket], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+											if (send(ipc_sockets[socket], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 											{
 												terminate_socket_noacl (socket);
 											}
@@ -1152,7 +1177,7 @@ int main (int argc, char **argv)
 
 									if (allowed != 0x3)
 									{
-										char *denial = NULL;
+										const char *denial = NULL;
 										switch (allowed)
 										{
 											case 0x2:
@@ -1168,7 +1193,7 @@ int main (int argc, char **argv)
 											cleanup_handler ();
 											exit (0);
 										}
-										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 										{
 											terminate_socket (i);
 										}
@@ -1194,7 +1219,7 @@ int main (int argc, char **argv)
 										exit (0);
 									}
 
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 									{
 										terminate_socket (i);
 									}
@@ -1265,7 +1290,7 @@ int main (int argc, char **argv)
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 									{
 										terminate_socket (i);
 									}
@@ -1335,7 +1360,7 @@ int main (int argc, char **argv)
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 									{
 										terminate_socket (i);
 									}
@@ -1380,7 +1405,7 @@ int main (int argc, char **argv)
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 									{
 										terminate_socket (i);
 									}
@@ -1410,7 +1435,7 @@ int main (int argc, char **argv)
 			if (keepalive && ipc_sockets[i] > 0)
 			{
 				ipc_encode_noop (&ipc_packet, ipc_buffer);
-				if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+				if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 				{
 					terminate_socket (i);
 				}

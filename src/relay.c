@@ -2,7 +2,7 @@
  * relay.c :  Relay an udp stream from a multicast addr to any addr.
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: relay.c 822 2006-11-04 01:20:01Z vinz2 $
+ * $Id: relay.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -22,6 +22,9 @@
  *****************************************************************************/
 
 #define _GNU_SOURCE
+#ifndef __GNUC__
+#  define  __attribute__(x)  /* */
+#endif
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,13 +43,32 @@
 #include "log.h"
 #include "udpsocket.h"
 
+/**
+ * Constants & macros
+ */
 #define UDP_BUFFER 2000
 
 #define FREE(a) if (a) { free(a); (a) = NULL; }
 
-
+/**
+ * Global variables
+ */
 int verbosity = 0;
-void terminate ();
+
+/**
+ * Prototypes
+ */
+void sigalarm_block (void);
+void sigalarm_unblock (void);
+void sigterm_handler (int)
+		__attribute((noreturn));
+void sigalarm_handler (int)
+		__attribute((noreturn));
+void terminate (void);
+
+int prepare_socket(char *, struct in_addr *, struct sockaddr_in *, int);
+
+void usage (void);
 
 /**
  * Logging
@@ -79,7 +101,7 @@ void log_error (const char *format, ...)
 /**
  * Signal handlers & closers
  */
-void sigalarm_block()
+void sigalarm_block ()
 {
 	sigset_t ens;
 	sigemptyset(&ens);
@@ -87,7 +109,7 @@ void sigalarm_block()
 
 	sigprocmask(SIG_BLOCK, &ens, NULL);
 }
-void sigalarm_unblock()
+void sigalarm_unblock ()
 {
 	sigset_t ens;
 	sigset_t old;
@@ -121,7 +143,7 @@ void terminate ()
 /**
  * "URI" handler
  */
-int prepare_socket(char *uri, struct in_addr *laddr, struct sockaddr_in *sockaddr, int write)
+int prepare_socket(char *uri, struct in_addr *laddr, struct sockaddr_in *sockaddr, int wflag)
 {
 	char *colon = strchr(uri, ':');
 	char *ip;
@@ -153,7 +175,7 @@ int prepare_socket(char *uri, struct in_addr *laddr, struct sockaddr_in *sockadd
 	free(ip);
 
 	/* Ouverture du socket */
-	if (write > 0)
+	if (wflag > 0)
 		sock = udpsocket_wopen((laddr != NULL ? laddr->s_addr : INADDR_ANY), addr.s_addr, port);
 	else
 		sock = udpsocket_ropen((laddr != NULL ? laddr->s_addr : INADDR_ANY), addr.s_addr, port);
@@ -211,7 +233,7 @@ int main (int argc, char** argv)
 		{"count",		1, 0, 'n'},
 		{0,			0, 0,  0 }
 	};
-	while(1)
+	for (;;)
 	{
 		char c = getopt_long(argc, argv, "hvql:d:n:", longopts, NULL);
 		if (c < 0)

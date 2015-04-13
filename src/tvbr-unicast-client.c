@@ -2,7 +2,7 @@
  * tvbr-unicast-client.c :  TV-Unicaster over HTTP
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-unicast-client.c 934 2007-01-26 14:56:18Z vinz2 $
+ * $Id: tvbr-unicast-client.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -26,30 +26,41 @@
 // TODO: regler le probleme de la non-fermeture du tvbr-unicast-client lorsque la connection apache est coupee
 
 /**
- *  Initialization of global variables
+ *  Parameters
  */
-
-/* Parameters */
 #define URL_PATH "/stream/"
 #define DATA_TIMEOUT 2
 
-/* Global vars */
+#define IPC_TIMEOUT 2000
+#define UDP_BUFFER 2000
+#define LOGBUFFER_SIZE 1024
+
+/**
+ *  Global variables
+ */
 int verbosity = 0;
 int log_fd = 0;
 pid_t log_pid = 0;
 
-/* IPC Connection */
-#define IPC_TIMEOUT 2000
 int ipc_socket;
-
-/* UDP Multicast connection */
-#define UDP_BUFFER 2000
 int udp_socket;
+
+/**
+ *  Prototypes
+ */
+inline void log_do (const int, const char *, const char *, va_list)
+		__attribute__((format(printf,3,0)));
+
+void cleanup_handler (void);
+void signal_handler (int);
+
+void cgi_headers (const int, const char *);
+void cgi_error (const int, const char *, ...)
+		__attribute__((format(printf,2,3)));
 
 /**
  *  Logging function
  */
-#define LOGBUFFER_SIZE 1024
 inline void log_do (const int minverb, const char *prefix, const char *format, va_list ap)
 {
 	int written_prefix, written_message;
@@ -199,7 +210,7 @@ void cgi_headers (const int status, const char *mimetype)
 }
 void cgi_error (const int status, const char *format, ...)
 {
-	char *title;
+	const char *title;
 	va_list ap;
 	va_start(ap, format);
 
@@ -364,7 +375,7 @@ int main (int argc, char **argv)
 		cleanup_handler ();
 		exit (1);
 	}
-	if (send(ipc_socket, ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != ipc_packet.packet_length)
+	if (send(ipc_socket, ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
 	{
 		cgi_error (403, "The script was unable to contact authorization server.");
 		log_warn("sending of authorization request failed (%s)", strerror(errno));
@@ -465,7 +476,7 @@ int main (int argc, char **argv)
 	cgi_headers(200, "video/mpeg");
 
 	/* Main loop */
-	while (1)
+	for (;;)
 	{
 		fd_set rfds;
 		int maxsocket;
@@ -486,7 +497,7 @@ int main (int argc, char **argv)
 		/* Checking IPC */
 		if (FD_ISSET(ipc_socket, &rfds))
 		{
-			while (1)
+			for (;;)
 			{
 				ipc_read = ipc_recv(ipc_socket, ipc_buffer, IPC_BUFFER, MSG_DONTWAIT);
 				if (ipc_read < 0)
@@ -554,7 +565,7 @@ int main (int argc, char **argv)
 		/* Checking datas */
 		if (FD_ISSET(udp_socket, &rfds))
 		{
-			while (1)
+			for (;;)
 			{
 				udp_read = recvfrom(udp_socket, udp_buffer, UDP_BUFFER, MSG_DONTWAIT, (struct sockaddr *)&udp_from, &udp_fromlen);
 				if (udp_read < 0)
@@ -570,7 +581,7 @@ int main (int argc, char **argv)
 
 				if (udp_read > 0)
 				{
-					if (fwrite(udp_buffer, 1, udp_read, stdout) != udp_read)
+					if ((int)fwrite(udp_buffer, 1, udp_read, stdout) != udp_read)
 					{
 						log_info("broken pipe");
 						cleanup_handler ();

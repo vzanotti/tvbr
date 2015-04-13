@@ -2,7 +2,7 @@
  * log.h :  Logging helpers
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: log.h 821 2006-11-04 01:19:02Z vinz2 $
+ * $Id: log.h 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -26,9 +26,13 @@
 
 #include <stdarg.h>
 
-void log_debug (const char *format, ...);
-void log_info (const char *format, ...);
-void log_warn (const char *format, ...);
-void log_error (const char *format, ...);
+void log_debug (const char *format, ...)
+		__attribute__((format(printf,1,2)));
+void log_info (const char *format, ...)
+		__attribute__((format(printf,1,2)));
+void log_warn (const char *format, ...)
+		__attribute__((format(printf,1,2)));
+void log_error (const char *format, ...)
+		__attribute__((format(printf,1,2)));
 
 #endif

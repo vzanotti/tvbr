@@ -2,7 +2,7 @@
  * dump_sap.c :  Dump SAP announcements (udp / multicast)
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: dump_sap.c 842 2006-11-18 16:58:11Z vinz2 $
+ * $Id: dump_sap.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  * Inspired from:
@@ -25,6 +25,9 @@
  *****************************************************************************/
 
 #define _GNU_SOURCE
+#ifndef __GNUC__
+#  define  __attribute__(x)  /* */
+#endif
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -41,6 +44,9 @@
 #include "log.h"
 #include "udpsocket.h"
 
+/**
+ * Configuration
+ */
 #define SAP_PORT 9875
 #define SAP_V4_GLOBAL_ADDRESS	"224.2.127.254"
 #define SAP_V4_ORG_ADDRESS	"239.195.255.255"
@@ -48,6 +54,9 @@
 #define SAP_V4_LINK_ADDRESS	"224.0.0.255"
 #define SAP_BUFFER		5000
 
+/**
+ * Macros
+ */
 #define DISPLAY_NORMAL		0
 #define DISPLAY_CSV		1
 #define DISPLAY_ZSV		2
@@ -89,9 +98,32 @@
 	(tab)[count] = (p);							\
 	(count)++
 
+#define GET_FIELD(store)					\
+	psz_eof = strchr(psz_parse, ' ');			\
+	if(psz_eof)							\
+	{								\
+		*psz_eof=0; store = strdup(psz_parse);	\
+	}								\
+	else								\
+	{								\
+		if(i_field != 5)					\
+		{							\
+			b_invalid = 1; break;			\
+		}							\
+		else							\
+		{							\
+			store = strdup(psz_parse);		\
+		}							\
+	}								\
+	psz_parse = psz_eof + 1;				\
+	i_field++;
+
+/**
+ * Structure definitions
+ */
 typedef struct sdp_t sdp_t;
 typedef struct attribute_t attribute_t;
-struct  sdp_t
+struct sdp_t
 {
 	char *psz_sdp;
 
@@ -126,23 +158,36 @@ struct attribute_t
 	char *psz_value;
 };
 
-
+/**
+ * Global variables
+ */
 int verbosity = 0;
 int sap_display_mode = DISPLAY_NORMAL;
 sdp_t **sdp_announces = NULL;
 int sdp_announces_size = 0;
 
-void terminate();
+/**
+ * Prototypes
+ */
+void sigalarm_block (void);
+void sigalarm_unblock (void);
+void sigterm_handler (int)
+		__attribute((noreturn));
+void sigalarm_handler (int)
+		__attribute((noreturn));
+void terminate (void);
 
-void sap_output();
-void sap_parse(const in_addr_t, const char *, const int);
-sdp_t* sdp_parse(char *);
-int sdp_connection_parse(sdp_t *);
+void sap_output (void);
+void sap_parse (const in_addr_t, const char *, const int);
+sdp_t* sdp_parse (char *);
+int sdp_connection_parse (sdp_t *);
 
-void sdp_free(sdp_t *);
-int sdp_same_session(sdp_t *, sdp_t *);
-char *get_attribute(sdp_t *, const char *);
-int sap_inflate(unsigned char *, unsigned char **, int);
+void sdp_free (sdp_t *);
+int sdp_same_session (sdp_t *, sdp_t *);
+char *get_attribute (sdp_t *, const char *);
+int sap_inflate (unsigned char *, unsigned char **, int);
+
+void usage (void);
 
 /**
  * Logging
@@ -199,7 +244,7 @@ void log_error (const char *format, ...)
 /**
  * Signal handlers & closers
  */
-void sigalarm_block()
+void sigalarm_block ()
 {
 	sigset_t ens;
 	sigemptyset(&ens);
@@ -207,7 +252,7 @@ void sigalarm_block()
 
 	sigprocmask(SIG_BLOCK, &ens, NULL);
 }
-void sigalarm_unblock()
+void sigalarm_unblock ()
 {
 	sigset_t ens;
 	sigset_t old;
@@ -623,28 +668,8 @@ sdp_t* sdp_parse(char* psz_sdp)
 			case 'o':
 			{
 				int i_field = 0;
+
 				/* o field is <username> <session id> <version> <network type> <address type> <address> */
-
-#define GET_FIELD( store )					\
-	psz_eof = strchr(psz_parse, ' ');			\
-	if(psz_eof)							\
-	{								\
-		*psz_eof=0; store = strdup(psz_parse);	\
-	}								\
-	else								\
-	{								\
-		if(i_field != 5)					\
-		{							\
-			b_invalid = 1; break;			\
-		}							\
-		else							\
-		{							\
-			store = strdup(psz_parse);		\
-		}							\
-	}								\
-	psz_parse = psz_eof + 1;				\
-	i_field++;
-
 				psz_parse = &psz_sdp[2];
 				GET_FIELD( p_sdp->psz_username );
 				GET_FIELD( psz_sess_id );

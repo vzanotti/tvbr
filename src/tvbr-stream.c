@@ -2,7 +2,7 @@
  * tvbr-stream.c :  Streaming threads
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-stream.c 887 2006-12-14 02:28:24Z vinz2 $
+ * $Id: tvbr-stream.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  * Inspired from:
@@ -30,6 +30,17 @@
  */
 dvb_tune stream_dvb_params[DVB_MAX_DEVS];
 dvb_mode stream_dvb_mode[DVB_MAX_DEVS];
+
+/**
+ *  Private prototypes
+ */
+void stream_cleanup_channel (void *);
+void stream_cleanup_channels (void *);
+void stream_cleanup_status (void *data);
+
+int stream_pmt_filter (uint16_t *, const unsigned char *);
+inline int stream_pmt_check (const uint16_t *, int, const uint16_t *);
+inline void stream_pmt_rewrite (unsigned char *, stream_channel *);
 
 /**
  *  CRC
@@ -117,7 +128,7 @@ void stream_cleanup_channel (void *data)
 }
 void stream_cleanup_channels (void *data)
 {
-	int i;
+	unsigned int i;
 	stream_channels *channels = (stream_channels *) data;
 
 	log_debug("entering cleanup_channels function");
@@ -142,74 +153,74 @@ void stream_cleanup_status (void *data)
 /**
  *  PMT Filtering
  */
-int stream_pmt_filter (uint16_t *pmtpids, unsigned char *dvbbuf)
+int stream_pmt_filter (uint16_t *pmtpids, const unsigned char *dvbbuf)
 {
-	unsigned char *payload_begin, *payload_end, *p_begin, *p_ptr, *p_end;
+	const unsigned char *payload_begin, *payload_end, *p_begin, *p_ptr, *p_end;
 	uint16_t psilen;
 	int pmtpidscount = 0;
-	
+
 	/* TS start code */
 	if (dvbbuf[0] != 0x47)
 		return 0;
-	
+
 	/* No payload */
 	if (!(dvbbuf[3] & 0x10))
 		return 0;
-		
+
 	/* Skip the adaptation_field if present */
 	if (dvbbuf[3] & 0x20)
 		payload_begin = dvbbuf + 5 + dvbbuf[4];
 	else
 		payload_begin = dvbbuf + 4;
-	
+
 	/* skip the pointer_field and a new section begins */
 	if(dvbbuf[1] & 0x40)
 		payload_begin += 1;
-		
+
 	/* Check table_id value */
 	if (payload_begin[0] != 0x02)
 		return 0;
-	
+
 	/* Real payload start */
 	if (payload_begin[1] & 0x80)
 		p_begin = payload_begin + 8;
 	else
 		p_begin = payload_begin + 3;
-	
+
 	/* Payload end + CRC */
 	psilen = 3 + (((uint16_t)(payload_begin[1] & 0xf)) << 8 | payload_begin[2]);
 	payload_end = payload_begin + psilen;
 	if (payload_begin[1] & 0x80)
 		payload_end -= 4;
-		
+
 	/* PMT Descriptors */
 	p_ptr = p_begin + 4;
 	p_end = p_ptr + (((uint16_t)(p_begin[2] & 0x0f) << 8) | p_begin[3]);
 	while (p_ptr + 2 <= p_end)
 		p_ptr += 2 + p_ptr[1];
-	
+
 	/* Elementary streams */
 	for (p_ptr = p_end; p_ptr + 4 <= payload_end;)
 	{
 		uint16_t pid = ((uint16_t)(p_ptr[1] & 0x1f) << 8) | p_ptr[2];
 		uint16_t len = ((uint16_t)(p_ptr[3] & 0x0f) << 8) | p_ptr[4];
-		
+
 		pmtpids[pmtpidscount++] = pid;
 		if (pmtpidscount >= DVB_MAX_PMT_PIDS)
 			return pmtpidscount;
-		
+
 		p_ptr += 5;
 		p_end = p_ptr + len;
 		if (p_end > payload_end)
 			p_end = payload_end;
-		
+
 		while (p_ptr + 2 <= p_end)
 			p_ptr += 2 + p_ptr[1];
 	}
 
 	return pmtpidscount;
 }
-inline int stream_pmt_check (uint16_t *pmtpids, int pmtpidscount, uint16_t *pids)
+inline int stream_pmt_check (const uint16_t *pmtpids, int pmtpidscount, const uint16_t *pids)
 {
 	int i;
 	for (i = 0; i < pmtpidscount; i++)
@@ -224,40 +235,40 @@ inline void stream_pmt_rewrite (unsigned char *buffer, stream_channel *channel)
 	/* TS Discontinuity rewrite */
 	buffer[3] = (buffer[3] & 0xf0) | (channel->ts_continuity & 0x0f);
 	channel->ts_continuity = (channel->ts_continuity + 1) & 0xf;
-	
+
 	/* PCR_PID Rewrite */
 	if (channel->channel->pmt_pcr_pid > 0)
 	{
 		unsigned char *p_ptr = buffer;
 		unsigned char *p_crc;
-		
+
 		/* Skip the adaptation_field if present */
 		if (buffer[3] & 0x20)
 			p_ptr = buffer + 5 + buffer[4];
 		else
 			p_ptr = buffer + 4;
-	
+
 		/* skip the pointer_field and a new section begins */
 		if(buffer[1] & 0x40)
 			p_ptr += 1;
-			
+
 		/* Update PCR ID */
 		p_ptr[8] = (p_ptr[8] & 0xe0) | ((channel->channel->pmt_pcr_pid >> 8) & 0x1f);
 		p_ptr[9] = (channel->channel->pmt_pcr_pid & 0xff);
-		
+
 		/* Payload end + CRC */
 		if (p_ptr[1] & 0x80)
 		{
 			uint32_t crc = 0xffffffff;
-			
+
 			p_crc = p_ptr + 3 + (((uint16_t)(p_ptr[1] & 0xf)) << 8 | p_ptr[2]) - 4;
-			
+
 			while(p_ptr < p_crc)
 			{
 				crc = (crc << 8) ^ stream_crc32_table[(crc >> 24) ^ (*p_ptr)];
 				p_ptr ++;
 			}
-			
+
 			p_crc[0] = (crc >> 24) & 0xff;
 			p_crc[1] = (crc >> 16) & 0xff;
 			p_crc[2] = (crc >> 8) & 0xff;
@@ -271,10 +282,10 @@ inline void stream_pmt_rewrite (unsigned char *buffer, stream_channel *channel)
  */
 void *stream_main (void *data)
 {
-	int i, j, npids;
+	unsigned int i, j, npids;
 	uint16_t *pids;
 	uint16_t pidstab[DVB_MAX_PIDS];
-	
+
 	uint16_t pmtpids[DVB_MAX_PMT_PIDS];
 	int pmtpidscount = 0;
 	int pmtprocessed = 0;
@@ -296,11 +307,11 @@ void *stream_main (void *data)
 
 	if (card->card_type == DVB_NONE)
 	{
-		log_error("Trying to start an empty config", log_strerror_buf);
+		log_error("Trying to start an empty config (%s)", log_strerror_buf);
 		return NULL;
 	}
 
-	pthread_setspecific (tvbr_card_key, (void *) (card->card));
+	pthread_setspecific (tvbr_card_key, (void *) &(card->card));
 
 	/* Initialisation of data structure channels */
 	memset(pidstab, 0, sizeof(unsigned short) * DVB_MAX_PIDS);
@@ -395,9 +406,13 @@ void *stream_main (void *data)
 	}
 
 	j = 0;
-	for (i = 0; i < DVB_MAX_PIDS; i++)
-		if (pidstab[i] > 0)
+	npids = 0;
+	for (i = 0; i < DVB_MAX_PIDS; i++) {
+		if (pidstab[i] > 0) {
 			pids[j++] = i;
+			npids ++;
+		}
+	}
 
 	/* Tuning & opening dvb fds */
 	pthread_cleanup_push (dvb_cleanup_fd, &fd);
@@ -447,7 +462,7 @@ void *stream_main (void *data)
 		{
 			pthread_mutex_lock (&log_strerror_buf_mutex);
 			strerror_r(errno, log_strerror_buf, LOG_STRERROR_BUFLEN);
-			log_warn("Unable to obtain local ip address for card %d (%s)", card, log_strerror_buf);
+			log_warn("Unable to obtain local ip address for channel %d (%s)", i, log_strerror_buf);
 			pthread_mutex_unlock (&log_strerror_buf_mutex);
 			continue;
 		}
@@ -472,8 +487,8 @@ void *stream_main (void *data)
 
 	pollfd.fd = fd.fd_dvr;
 	pollfd.events = POLLIN | POLLPRI;
-	
-	while (1)
+
+	for (;;)
 	{
 		count_loops ++;
 
@@ -496,12 +511,12 @@ void *stream_main (void *data)
 				pid = ((dvbptr[1] << 8) | (dvbptr[2] & 0xff)) & 0x1fff;
 				pidsfreq[pid] ++;
 				pmtprocessed = 0;
-				
+
 				for (i = 0; i < channels.nchannels; i++)
 				{
 					if (channels.channels[i].pids[pid] == 0)
 						continue;
-						
+
 					/* PMT Filtering */
 					if (pid > 0 && channels.channels[i].channel->pmt_filter == pid)
 					{
@@ -516,7 +531,7 @@ void *stream_main (void *data)
 
 					memcpy (&(channels.channels[i].udpbuffer[channels.channels[i].buffered]), dvbptr, DVB_TS_PACKETSIZE);
 					channels.channels[i].buffered += DVB_TS_PACKETSIZE;
-					
+
 					/* PMT Rewriting */
 					if (pmtpidscount > 0 && pid > 0 && channels.channels[i].channel->pmt_filter == pid)
 					{

@@ -1,5 +1,5 @@
 CC     = gcc
-CFLAGS = -Wall
+CFLAGS = -fstrict-aliasing -Wall
 IFLAGS = -g root -o root
 
 OUT       = dump_sap dump_udp relay tvbr tvbr-unicast-client tvbr-unicast-server

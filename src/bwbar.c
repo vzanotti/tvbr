@@ -1,6 +1,6 @@
-/* $Id: bwbar.c 846 2006-11-18 19:43:35Z vinz2 $ */
+/* $Id: bwbar.c 957 2007-02-22 15:57:41Z vinz2 $ */
 /* ----------------------------------------------------------------------- *
- *   
+ *
  *   Copyright 1999-2001 H. Peter Anvin - All Rights Reserved
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,10 @@
 #include <alloca.h>
 #include <getopt.h>
 #include <png.h>
+
+void skipline(FILE *);
+int write_bar_graph(FILE *, double, int, int, int, int);
+void usage(int);
 
 void skipline(FILE *f)
 {
@@ -123,7 +127,7 @@ int write_bar_graph(FILE *f, double perc, int width, int height, int border, int
     *bp++ = color;
     spacer = fspacer;
   }
-  
+
   for ( x = 0 ; x < border ; x++ )
     *bp++ = 0;			/* Border color */
 
@@ -203,9 +207,9 @@ int main(int argc, char *argv[])
   char *t_tmp, *g_tmp;
   /* Options */
   int measure_input = 0;	/* Input instead of output */
-  char *text_file = "ubar.txt";	/* Text filename */
-  char *graphics_file = "ubar.png"; /* Graphics filename */
-  char *unit_name = "Mbit/s";	/* Unit name */
+  const char *text_file = "ubar.txt";	/* Text filename */
+  const char *graphics_file = "ubar.png"; /* Graphics filename */
+  const char *unit_name = "Mbit/s";	/* Unit name */
   double unit = 1.0e+6;		/* Unit multiplier */
   int interval = 15;		/* Interval between measurements (s) */
   int width = 600;		/* Bar width */
@@ -280,7 +284,7 @@ int main(int argc, char *argv[])
 
   first = 1;
   lbin = 0; lbout = 0;
-  
+
   while ( 1 ) {
 
     /**** Begin code that obtains bandwidth data ****/
@@ -323,13 +327,13 @@ int main(int argc, char *argv[])
     if ( !first ) {
       FILE *ubar, *pngmaker;
 
-      timedelta = (double)(t_now.tv_sec - t_last.tv_sec) + 
+      timedelta = (double)(t_now.tv_sec - t_last.tv_sec) +
 	(t_now.tv_usec - t_last.tv_usec)/1.0e+6;
       bwin = (bin-lbin)*8/timedelta;
       bwout = (bout-lbout)*8/timedelta;
 
       bwmeasure = measure_input ? bwin : bwout;
-      
+
       ubar = fopen(t_tmp, "w");
       pngmaker = fopen(g_tmp, "w");
       if ( ubar ) {

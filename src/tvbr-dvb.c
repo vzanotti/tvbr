@@ -2,7 +2,7 @@
  * tvbr-dvb.c :  DVB functions
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-dvb.c 824 2006-11-04 17:29:47Z vinz2 $
+ * $Id: tvbr-dvb.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  * Inspired from:
@@ -35,7 +35,7 @@ pthread_t dvb_tuned_card_thread;
 /**
  * DVB Devices
  */
-char *dvb_frontenddev[DVB_MAX_DEVS] = {
+const char *dvb_frontenddev[DVB_MAX_DEVS] = {
 	"/dev/dvb/adapter0/frontend0",
 	"/dev/dvb/adapter1/frontend0",
 	"/dev/dvb/adapter2/frontend0",
@@ -44,7 +44,7 @@ char *dvb_frontenddev[DVB_MAX_DEVS] = {
 	"/dev/dvb/adapter5/frontend0"
 };
 
-char *dvb_demuxdev[DVB_MAX_DEVS] = {
+const char *dvb_demuxdev[DVB_MAX_DEVS] = {
 	"/dev/dvb/adapter0/demux0",
 	"/dev/dvb/adapter1/demux0",
 	"/dev/dvb/adapter2/demux0",
@@ -53,7 +53,7 @@ char *dvb_demuxdev[DVB_MAX_DEVS] = {
 	"/dev/dvb/adapter5/demux0"
 };
 
-char *dvb_dvrdev[DVB_MAX_DEVS] = {
+const char *dvb_dvrdev[DVB_MAX_DEVS] = {
 	"/dev/dvb/adapter0/dvr0",
 	"/dev/dvb/adapter1/dvr0",
 	"/dev/dvb/adapter2/dvr0",
@@ -79,7 +79,7 @@ void dvb_cleanup_fd (void *data)
 /**
  * DVB fd manipulator
  */
-int dvb_fd_init (dvb_fd *fd, dvb_tune *tune, int card, int npids, uint16_t *pids)
+int dvb_fd_init (dvb_fd *fd, const dvb_tune *tune, int card, int npids, const uint16_t *pids)
 {
 	int dvbs_band = DVB_S_FREQ_L;
 	int timeleft, i;
@@ -197,7 +197,7 @@ int dvb_fd_init (dvb_fd *fd, dvb_tune *tune, int card, int npids, uint16_t *pids
 	timeleft = (tune->tunetimeout > 0 ? tune->tunetimeout : DVB_TUNE_TIMEOUT);
 
 	/* Emptying event queue */
-	while (1)
+	for (;;)
 	{
 		if (ioctl(fd->fd_frontend, FE_GET_EVENT, &fe_event) < 0)
 			break;
@@ -253,13 +253,13 @@ int dvb_fd_init (dvb_fd *fd, dvb_tune *tune, int card, int npids, uint16_t *pids
 				log_info("Got tuning event: frequency = %d Hz", fe_event.parameters.frequency);
 				break;
 			case FE_QPSK:
-				log_info("Got tuning event: frequency = %d Hz, symbol_rate = %d, inner fec = %d",
+				log_info("Got tuning event: frequency = %lu Hz, symbol_rate = %u, inner fec = %d",
 					    fe_event.parameters.frequency + (dvbs_band == DVB_S_FREQ_L ? DVB_S_LOWERFREQ : DVB_S_UPPERFREQ),
 					    fe_event.parameters.u.qpsk.symbol_rate, fe_event.parameters.u.qpsk.fec_inner);
 				break;
 			case FE_QAM:
-				log_info("Got tuning event: frequency = %d Hz, symbol_rate = %d, inner fec = %d",
-					    fe_event.parameters.frequency, fe_event.parameters.u.qpsk.symbol_rate, fe_event.parameters.u.qpsk.fec_inner);
+				log_info("Got tuning event: frequency = %u Hz, symbol_rate = %u, inner fec = %d",
+					    fe_event.parameters.frequency, fe_event.parameters.u.qam.symbol_rate, fe_event.parameters.u.qam.fec_inner);
 				break;
 			default:
 				break;
@@ -270,7 +270,7 @@ int dvb_fd_init (dvb_fd *fd, dvb_tune *tune, int card, int npids, uint16_t *pids
 		ioctl(fd->fd_frontend, FE_READ_SNR, &snr);
 		ioctl(fd->fd_frontend, FE_READ_STATUS, &fe_status);
 
-		log_info("Tuning result: BER = %lu, Sig strength = %u, SNR = %u, status =%s%s%s%s%s%s", ber, strength & 0xFFFFL, snr & 0xFFFFL,
+		log_info("Tuning result: BER = %u, Sig strength = %ld, SNR = %ld, status =%s%s%s%s%s%s", ber, strength & 0xFFFFL, snr & 0xFFFFL,
 			    (fe_status & FE_HAS_SIGNAL ? " FE_HAS_SIGNAL" : ""),
 			    (fe_status & FE_TIMEDOUT ? " FE_TIMEDOUT" : ""),
 			    (fe_status & FE_HAS_LOCK ? " FE_HAS_LOCK" : ""),

@@ -2,7 +2,7 @@
  * dump_dup.c :  Dump UDP multicast stream
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: dump_udp.c 903 2006-12-23 17:49:00Z vinz2 $
+ * $Id: dump_udp.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -22,6 +22,9 @@
  *****************************************************************************/
 
 #define _GNU_SOURCE
+#ifndef __GNUC__
+#  define  __attribute__(x)  /* */
+#endif
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -41,18 +44,32 @@
 #include "log.h"
 #include "udpsocket.h"
 
+/**
+ * Constants & macros
+ */
 #define UDP_BUFFER 2000
 
 #define FREE(a) if (a) { free(a); (a) = NULL; }
 
-
+/**
+ * Global variables
+ */
 int verbosity = 0;
 
 int streams = 0;
 int *sockets = NULL;
 int *files = NULL;
 
-void terminate ();
+/**
+ * Prototypes
+ */
+void sigterm_handler (int)
+		__attribute((noreturn));
+void sigalarm_handler (int)
+		__attribute((noreturn));
+void terminate (void);
+
+void usage (void);
 
 /**
  * Logging
@@ -309,7 +326,7 @@ int main (int argc, char** argv)
 
 
 	/* Main loop (polling & dumping) */
-	while (1 && udp_packets != 0)
+	while (udp_packets != 0)
 	{
 		fd_set rfds;
 		int maxsock = 0;
@@ -340,7 +357,7 @@ int main (int argc, char** argv)
 			if (!FD_ISSET(sockets[i], &rfds))
 				continue;
 
-			while (1)
+			for (;;)
 			{
 				udp_read = recvfrom(sockets[i], udp_buffer, UDP_BUFFER, MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
 				udp_buffer[udp_read] = '\0';

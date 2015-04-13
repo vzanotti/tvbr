@@ -2,7 +2,7 @@
  * tvbr-unicast-ipc.c :  TV-Unicaster Client-Server communications
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-unicast-ipc.c 916 2007-01-15 00:08:27Z vinz2 $
+ * $Id: tvbr-unicast-ipc.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -35,7 +35,7 @@ int ipc_recv(int socket, unsigned char *buffer, int buffer_length, int recv_flag
 	}
 
 	len = ((ipc_header *)buffer) -> length;
-	if (len > buffer_length - sizeof(ipc_header))
+	if (len > buffer_length - (int)sizeof(ipc_header))
 		len = buffer_length - sizeof(ipc_header);
 	if (len < 0)
 		len = 0;
@@ -61,7 +61,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 	}
 
 	/* Verifying packet size */
-	if (length < sizeof (ipc_header))
+	if (length < (int)sizeof (ipc_header))
 	{
 		log_debug ("ignoring too short message (missing headers)");
 		return 0;
@@ -300,7 +300,7 @@ int ipc_encode_connection_get (ipc_packet *packet, unsigned char *buffer)
 }
 
 /* IPC Encode: Deny & request */
-int ipc_encode_access_request (ipc_packet *packet, unsigned char *buffer, uint32_t host_ip, char *url)
+int ipc_encode_access_request (ipc_packet *packet, unsigned char *buffer, uint32_t host_ip, const char *url)
 {
 	if (ipc_encode_headers(packet, IPC_ACCESS_REQUEST))
 	{
@@ -311,7 +311,7 @@ int ipc_encode_access_request (ipc_packet *packet, unsigned char *buffer, uint32
 	}
 	return 0;
 }
-int ipc_encode_access_deny (ipc_packet *packet, unsigned char *buffer, char *denial, int status)
+int ipc_encode_access_deny (ipc_packet *packet, unsigned char *buffer, const char *denial, int status)
 {
 	if (ipc_encode_headers(packet, IPC_ACCESS_DENY))
 	{
@@ -322,7 +322,7 @@ int ipc_encode_access_deny (ipc_packet *packet, unsigned char *buffer, char *den
 	}
 	return 0;
 }
-int ipc_encode_access_accept (ipc_packet *packet, unsigned char *buffer, char *ip, unsigned int port)
+int ipc_encode_access_accept (ipc_packet *packet, unsigned char *buffer, const char *ip, unsigned int port)
 {
 	if (ipc_encode_headers(packet, IPC_ACCESS_ACCEPT))
 	{
@@ -377,7 +377,7 @@ int ipc_encode_answer (ipc_packet *packet, unsigned char *buffer, uint32_t ip)
 
 /* IPC Encode: Adding to lists */
 
-int ipc_encode_urllist_add (ipc_packet *packet, unsigned char *buffer, char *url, char *ip, unsigned int port)
+int ipc_encode_urllist_add (ipc_packet *packet, unsigned char *buffer, const char *url, const char *ip, unsigned int port)
 {
 	ipc_url *ptr;
 
@@ -394,7 +394,7 @@ int ipc_encode_urllist_add (ipc_packet *packet, unsigned char *buffer, char *url
 	return 1;
 }
 
-int ipc_encode_bwlist_add (ipc_packet *packet, unsigned char *buffer, char *name, unsigned int max_bw, unsigned int alloc_bw, unsigned int max_channels, unsigned int alloc_channels)
+int ipc_encode_bwlist_add (ipc_packet *packet, unsigned char *buffer, const char *name, unsigned int max_bw, unsigned int alloc_bw, unsigned int max_channels, unsigned int alloc_channels)
 {
 	ipc_bwgroup *ptr;
 
@@ -412,7 +412,7 @@ int ipc_encode_bwlist_add (ipc_packet *packet, unsigned char *buffer, char *name
 	return 0;
 }
 
-int ipc_encode_connlist_add (ipc_packet *packet, unsigned char *buffer, unsigned int host_ip, char *url, unsigned int start_time)
+int ipc_encode_connlist_add (ipc_packet *packet, unsigned char *buffer, unsigned int host_ip, const char *url, unsigned int start_time)
 {
 	ipc_connection *ptr;
 

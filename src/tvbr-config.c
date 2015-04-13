@@ -2,7 +2,7 @@
  * tvbr-config.c :  Configuration parsing
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr-config.c 887 2006-12-14 02:28:24Z vinz2 $
+ * $Id: tvbr-config.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -57,10 +57,10 @@ typedef struct config_channel_t {
 	uint16_t pno;
 	int npids;
 	uint16_t *pids;
-	
+
 	uint16_t pmt_filter;
 	uint16_t pmt_pcr_pid;
-	
+
 	enum {
 		MANDATORYPIDS_NONE,
 		MANDATORYPIDS_MINIMAL,
@@ -97,6 +97,18 @@ config_stream *streams;
 int map_cardtransponder[DVB_MAX_DEVS];
 config_transponder *used_transponders[DVB_MAX_DEVS];
 int nused_transponders;
+
+/**
+ *  Prototypes
+ */
+void config_cleanup_stream (config_stream *);
+void config_cleanup_channel (config_channel *);
+void config_cleanup_transponder (config_transponder *);
+
+inline char *next_token (config_token *);
+inline char *first_token (config_token *, char *);
+inline int isvalidname (const char*)
+		__attribute((unused));
 
 /**
  *  Cleanup handler
@@ -571,7 +583,7 @@ int config_channels ()
 					transp.type = TRANSP_DVBS;
 					transp.u.dvbs.frequency = 0;
 					transp.u.dvbs.symbolrate = 0;
-					transp.u.dvbs.polarity = -1;
+					transp.u.dvbs.polarity = 2;
 
 					while (*(NEXTOKEN))
 					{
@@ -622,7 +634,7 @@ int config_channels ()
 					}
 
 					/* Checking polarity */
-					if (transp.u.dvbs.polarity == -1)
+					if (transp.u.dvbs.polarity > 1)
 					{
 						log_error("New transponder at line %d must have a polarity", line);
 						fclose (fd);
@@ -686,7 +698,7 @@ int config_channels ()
 				chan.mandatory_pids = MANDATORYPIDS_FULL;
 				chan.pmt_filter = 0;
 				chan.pmt_pcr_pid = 0;
-				
+
 				/* Looping trough args */
 				while (*(NEXTOKEN))
 				{
@@ -1312,7 +1324,7 @@ int config_streams (const char *host)
 }
 int config_apply ()
 {
-	int i,j,c;
+	unsigned int i,j,c;
 	config_stream *sptr;
 
 	memset (tvbr_standard_config, 0, sizeof(tvbr_standard_config));

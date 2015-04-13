@@ -2,7 +2,7 @@
  * tvbr.c :  Main threads & common functions
  *****************************************************************************
  * Copyright (C) 2006 Binet Réseau
- * $Id: tvbr.c 887 2006-12-14 02:28:24Z vinz2 $
+ * $Id: tvbr.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
  *
@@ -43,6 +43,21 @@ int verbosity = 0;
 tvbr_mainstatus main_thread_status = TVBR_HUP;
 
 /**
+ * Prototypes
+ */
+inline void log_do (const int, const char *, const char *, va_list)
+		__attribute__((format(printf,3,0)));
+
+void tvbr_cleanup_channel (void *);
+void tvbr_cleanup_card (void *);
+void tvbr_signal_handler (int);
+
+int tvbr_config_copy (unsigned int);
+int tvbr_config_diff (unsigned int);
+
+void usage (void);
+
+/**
  *  Logging functions
  */
 inline void log_do (const int minverb, const char *prefix, const char *format, va_list ap)
@@ -64,7 +79,7 @@ inline void log_do (const int minverb, const char *prefix, const char *format, v
 		return;
 
 	/* Thread specific prefix */
-	card = (int) pthread_getspecific (tvbr_card_key);
+	card = * (int *) (pthread_getspecific (tvbr_card_key));
 	if (card >= 0)
 		fprintf(stderr, "%s card%d: %s: ", timebuf, card, prefix);
 	else
@@ -123,7 +138,7 @@ void tvbr_cleanup_channel (void *data)
 }
 void tvbr_cleanup_card (void *data)
 {
-	int i;
+	unsigned int i;
 	tvbr_card *card = (tvbr_card *)data;
 
 	if (card->channels == NULL)
@@ -160,7 +175,7 @@ void tvbr_signal_handler (int sig)
  */
 int tvbr_config_copy (unsigned int card)
 {
-	int i;
+	unsigned int i;
 	assert(card < DVB_MAX_DEVS);
 
 	/* Mutex lock */
@@ -214,7 +229,7 @@ int tvbr_config_copy (unsigned int card)
 }
 int tvbr_config_diff (unsigned int card)
 {
-	int i, j;
+	unsigned int i, j;
 	assert(card < DVB_MAX_DEVS);
 
 	if (tvbr_running_config[card].card_type != tvbr_standard_config[card].card_type)
@@ -284,7 +299,7 @@ int tvbr_config_diff (unsigned int card)
 			if (tvbr_running_config[card].channels[i].pids[j] != tvbr_standard_config[card].channels[i].pids[j])
 				return 1;
 		}
-	
+
 		if (tvbr_running_config[card].channels[i].pmt_filter != tvbr_standard_config[card].channels[i].pmt_filter)
 			return 1;
 		if (tvbr_running_config[card].channels[i].pmt_pcr_pid != tvbr_standard_config[card].channels[i].pmt_pcr_pid)
@@ -315,11 +330,11 @@ int main (int argc, char **argv)
 {
 	tvbr_restart restart[DVB_MAX_DEVS];
 	pthread_t tid;
-	int i;
+	int i, cardno;
 
-	char *confdir = NULL;
-	char *hostname = NULL;
-	char *cardlist = NULL;
+	const char *confdir = NULL;
+	const char *hostname = NULL;
+	const char *cardlist = NULL;
 
 	struct option longopts[] = {
 		{"help",	0, 0, 'h'},
@@ -332,8 +347,9 @@ int main (int argc, char **argv)
 	};
 
 	/* Initialisation */
+	cardno = -1;
 	pthread_key_create (&tvbr_card_key, NULL);
-	pthread_setspecific (tvbr_card_key, (void *) -1);
+	pthread_setspecific (tvbr_card_key, (void *) &cardno);
 
 	for (i = 0; i < DVB_MAX_DEVS; i++)
 		tvbr_card_status[i] = TVBR_STATUS_NOTSTARTED;
@@ -412,7 +428,7 @@ int main (int argc, char **argv)
 	pthread_detach (tid);
 
 	/* Main loop */
-	while (1)
+	for (;;)
 	{
 		/* Special case: party is over */
 		if (main_thread_status & TVBR_TERM)
