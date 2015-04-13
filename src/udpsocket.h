@@ -1,7 +1,7 @@
 /*****************************************************************************
  * socket.h :  UDP/Multicast socket helper
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: udpsocket.h 817 2006-11-01 23:33:08Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -24,9 +24,9 @@
 #ifndef _UDP_SOCKET_H
 #define _UDP_SOCKET_H
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 int udpsocket_open  (in_addr_t, in_addr_t, unsigned short);
 int udpsocket_ropen (in_addr_t, in_addr_t, unsigned short);
@@ -36,4 +36,4 @@ int udpsocket_close (int);
 int udpsocket_addmc (int, in_addr_t, in_addr_t);
 int udpsocket_setttl(int, int);
 
-#endif
+#endif  // _UDP_SOCKET_H

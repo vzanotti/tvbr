@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dump_sap.c :  Dump SAP announcements (udp / multicast)
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: dump_sap.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -24,25 +24,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
-#define _GNU_SOURCE
-#ifndef __GNUC__
-#  define  __attribute__(x)  /* */
-#endif
-
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <errno.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <zlib.h>
 #include "log.h"
 #include "udpsocket.h"
+
+#include <ctype.h>
+#include <errno.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <zlib.h>
 
 /**
  * Configuration
@@ -392,22 +387,22 @@ void sap_output ()
 
 			/* Group */
 			if (group != NULL)
-				printf("s:5:\"group\";s:%d:\"%s\";", strlen(group), group);
+				printf("s:5:\"group\";s:%zu:\"%s\";", strlen(group), group);
 
 			/* Name */
-			printf("s:4:\"name\";s:%d:\"%s\";", strlen(sdp_announces[i]->psz_sessionname), sdp_announces[i]->psz_sessionname);
+			printf("s:4:\"name\";s:%zu:\"%s\";", strlen(sdp_announces[i]->psz_sessionname), sdp_announces[i]->psz_sessionname);
 
 			/* URI */
-			printf("s:3:\"uri\";s:%d:\"%s\";", strlen(sdp_announces[i]->psz_uri), sdp_announces[i]->psz_uri);
+			printf("s:3:\"uri\";s:%zu:\"%s\";", strlen(sdp_announces[i]->psz_uri), sdp_announces[i]->psz_uri);
 
 			/* Media */
-			printf("s:5:\"media\";s:%d:\"%s\";", strlen(sdp_announces[i]->psz_media), sdp_announces[i]->psz_media);
+			printf("s:5:\"media\";s:%zu:\"%s\";", strlen(sdp_announces[i]->psz_media), sdp_announces[i]->psz_media);
 
 			/* Owner */
-			printf("s:5:\"owner\";s:%d:\"%s\";", strlen(sdp_announces[i]->psz_username), sdp_announces[i]->psz_username);
+			printf("s:5:\"owner\";s:%zu:\"%s\";", strlen(sdp_announces[i]->psz_username), sdp_announces[i]->psz_username);
 
 			/* SRC */
-			printf("s:3:\"src\";a:3:{s:7:\"nettype\";s:%d:\"%s\";s:8:\"addrtype\";s:%d:\"%s\";s:4:\"addr\";s:%d:\"%s\";}",
+			printf("s:3:\"src\";a:3:{s:7:\"nettype\";s:%zu:\"%s\";s:8:\"addrtype\";s:%zu:\"%s\";s:4:\"addr\";s:%zu:\"%s\";}",
 				 strlen(sdp_announces[i]->psz_network_type), sdp_announces[i]->psz_network_type,
 				 strlen(sdp_announces[i]->psz_address_type), sdp_announces[i]->psz_address_type,
 				 strlen(sdp_announces[i]->psz_address), sdp_announces[i]->psz_address
@@ -562,7 +557,7 @@ void sap_parse(const in_addr_t from, const char* buffer, const int buf_length)
 	if (p_sdp->psz_uri == NULL)
 		return;
 
-	/* Ajout de l'annonce à la liste */
+	/* Ajout de l'annonce ï¿½ la liste */
 	for (i = 0; i < sdp_announces_size; i++)
 	{
 		if (sdp_same_session(p_sdp, sdp_announces[i]))

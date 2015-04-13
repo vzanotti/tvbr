@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-unicast-client.c :  TV-Unicaster over HTTP
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-unicast-client.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -283,7 +283,7 @@ int main (int argc, char **argv)
 	int udp_read;
 
 	struct sockaddr_un ipc_server;
-	ipc_packet ipc_packet;
+	ipc_packet ipc_pkt;
 	unsigned char ipc_buffer[IPC_BUFFER];
 	int ipc_read;
 	struct in_addr ipc_host_addr;
@@ -368,14 +368,14 @@ int main (int argc, char **argv)
 	log_info("Handling request for '%s' by %s", query_string, host_ip);
 
 	/* Translation request -> ip */
-	if (!ipc_encode_access_request(&ipc_packet, ipc_buffer, ipc_host_addr.s_addr, query_string))
+	if (!ipc_encode_access_request(&ipc_pkt, ipc_buffer, ipc_host_addr.s_addr, query_string))
 	{
 		cgi_error (403, "The script was unable to contact authorization server.");
 		log_warn("unable to build authorization request");
 		cleanup_handler ();
 		exit (1);
 	}
-	if (send(ipc_socket, ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+	if (send(ipc_socket, ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 	{
 		cgi_error (403, "The script was unable to contact authorization server.");
 		log_warn("sending of authorization request failed (%s)", strerror(errno));
@@ -408,21 +408,21 @@ int main (int argc, char **argv)
 
 		if (ipc_read > 0)
 		{
-			if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_packet))
+			if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_pkt))
 			{
-				switch (ipc_packet.headers.type)
+				switch (ipc_pkt.headers.type)
 				{
 					case IPC_ACCESS_ACCEPT:
-						strncpy(query_ip, (char *) ipc_packet.payload.access_accept.query_ip, IPC_IP_LENGTH);
-						query_ip[IPC_IP_LENGTH] = '\0';
-						query_port = ipc_packet.payload.access_accept.query_port;
+						strncpy(query_ip, (char *) ipc_pkt.payload.access_accept.query_ip, IPC_IP_LENGTH);
+						query_ip[IPC_IP_LENGTH - 1] = '\0';
+						query_port = ipc_pkt.payload.access_accept.query_port;
 						break;
 
 					case IPC_ACCESS_DENY:
-						cgi_error (ipc_packet.payload.access_deny.status,
+						cgi_error (ipc_pkt.payload.access_deny.status,
 							     "Authorization server denied your access:<br />%s",
-							     ipc_packet.payload.access_deny.answer);
-						log_warn("authorization denied (%d: %s)", ipc_packet.payload.access_deny.status, ipc_packet.payload.access_deny.answer);
+							     ipc_pkt.payload.access_deny.answer);
+						log_warn("authorization denied (%d: %s)", ipc_pkt.payload.access_deny.status, ipc_pkt.payload.access_deny.answer);
 						cleanup_handler ();
 						exit (1);
 						break;
@@ -513,9 +513,9 @@ int main (int argc, char **argv)
 
 				if (ipc_read > 0)
 				{
-					if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_packet))
+					if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_pkt))
 					{
-						switch (ipc_packet.headers.type)
+						switch (ipc_pkt.headers.type)
 						{
 							case IPC_NOOP:
 							case IPC_ACCESS_ACCEPT:

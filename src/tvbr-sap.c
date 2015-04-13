@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-sap.c :  SAPserver thread
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-sap.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -189,7 +189,6 @@ int sap_unregister (int card)
 void *sap_main (void *d)
 {
 	int i, fd_sap;
-	struct sockaddr_in sout;
 	struct in_addr addr;
 	unsigned int sap_diff_sleep;
 	unsigned int sap_ext_sleep;
@@ -214,10 +213,6 @@ void *sap_main (void *d)
 	}
 
 	udpsocket_setttl (fd_sap, SAP_UDP_TTL);
-
-	sout.sin_family = AF_INET;
-	sout.sin_port = htons (SAP_UDP_PORT);
-	sout.sin_addr = addr;
 
 	/* Main loop */
 	for (;;)

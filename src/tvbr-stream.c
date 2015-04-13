@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-stream.c :  Streaming threads
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-stream.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -145,8 +145,8 @@ void stream_cleanup_status (void *data)
 	log_debug("entering cleanup_status function");
 
 	pthread_mutex_lock (&tvbr_card_status_mutex);
-	log_debug("(status) card %d status set to TVBR_STATUS_NOTSTARTED", (int) data);
-	tvbr_card_status[(int) data] = TVBR_STATUS_NOTSTARTED;
+	log_debug("(status) card %zu status set to TVBR_STATUS_NOTSTARTED", (size_t) data);
+	tvbr_card_status[(size_t) data] = TVBR_STATUS_NOTSTARTED;
 	pthread_mutex_unlock (&tvbr_card_status_mutex);
 }
 

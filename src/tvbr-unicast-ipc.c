@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-unicast-ipc.c :  TV-Unicaster Client-Server communications
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-unicast-ipc.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -101,7 +101,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 		case IPC_ACCESS_REQUEST:
 			if (packet->headers.length > sizeof (ipc_access_request))
 			{
-				log_info("found %d garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_request));
+				log_info("found %zu garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_request));
 			}
 			else if (packet->headers.length < sizeof (ipc_access_request))
 			{
@@ -114,7 +114,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 		case IPC_ACCESS_ACCEPT:
 			if (packet->headers.length > sizeof (ipc_access_accept))
 			{
-				log_info("found %d garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_accept));
+				log_info("found %zu garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_accept));
 			}
 			else if (packet->headers.length < sizeof (ipc_access_accept))
 			{
@@ -127,7 +127,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 		case IPC_ACCESS_DENY:
 			if (packet->headers.length > sizeof (ipc_access_deny))
 			{
-				log_info("found %d garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_deny));
+				log_info("found %zu garbage bytes at end of packet", packet->headers.length - sizeof (ipc_access_deny));
 			}
 			else if (packet->headers.length < sizeof (ipc_access_deny))
 			{
@@ -141,7 +141,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 		case IPC_BWGROUP_GET:
 			if (packet->headers.length > sizeof (ipc_request_list))
 			{
-				log_info("found %d garbage bytes at end of packet", packet->headers.length - sizeof (ipc_request_list));
+				log_info("found %zu garbage bytes at end of packet", packet->headers.length - sizeof (ipc_request_list));
 			}
 			else if (packet->headers.length < sizeof (ipc_request_list))
 			{
@@ -180,7 +180,7 @@ int ipc_decode (const unsigned char *buffer, const int length, ipc_packet *packe
 
 			if (packet->headers.length > sizeof (ipc_answer_list) + (element_size * packet->payload.answer_list.number))
 			{
-				log_info("found %d garbage bytes at end of packet", packet->headers.length - sizeof (ipc_answer_list) - (element_size * packet->payload.answer_list.number));
+				log_info("found %zu garbage bytes at end of packet", packet->headers.length - sizeof (ipc_answer_list) - (element_size * packet->payload.answer_list.number));
 			}
 			else if (packet->headers.length < sizeof (ipc_answer_list) + (element_size * packet->payload.answer_list.number))
 			{

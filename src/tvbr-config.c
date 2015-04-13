@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-config.c :  Configuration parsing
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-config.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -326,12 +326,12 @@ inline int isvalidname (const char* ptr)
  */
 int config_cards (const char *cards)
 {
-	int i;
+  int i;
 
 	/* cardlist parsing */
 	if (cards != NULL)
 	{
-		int n, i;
+		int n;
 		const char *ptr = cards;
 
 		for (i = 0; i < DVB_MAX_DEVS; i++)
@@ -433,7 +433,7 @@ int config_channels ()
 		}
 		if (strlen(buffer) >= CONFIG_BUFFER_SIZE - 1)
 		{
-			log_error ("Line length exceeded maximum (%d > %d), aborting reload", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
+			log_error ("Line length exceeded maximum (%zu > %d), aborting reload", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
 			fclose (fd);
 			return -1;
 		}
@@ -744,7 +744,7 @@ int config_channels ()
 					}
 					else IFTOKEN("pids")
 					{
-						int n, i;
+						int n;
 
 						NEXTOKEN;
 						IFMISSTOK("pids");
@@ -1034,7 +1034,7 @@ int config_streams (const char *host)
 		}
 		if (strlen(buffer) >= CONFIG_BUFFER_SIZE - 1)
 		{
-			log_error ("Line length exceeded maximum (%d > %d), aborting reload", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
+			log_error ("Line length exceeded maximum (%zu > %d), aborting reload", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
 			fclose (fd);
 			return -1;
 		}
@@ -1051,7 +1051,7 @@ int config_streams (const char *host)
 				config_channel *cptr;
 				config_stream stream;
 				config_stream *news;
-				config_stream **sptr;
+				config_stream **sptrptr;
 				char *hostname = NULL;
 				memset (&stream, 0, sizeof(stream));
 
@@ -1165,24 +1165,24 @@ int config_streams (const char *host)
 				news->channel = strdup (stream.channel);
 
 				/* Finding place to insert transponder */
-				sptr = &streams;
-				while (*sptr != NULL)
+				sptrptr = &streams;
+				while (*sptrptr != NULL)
 				{
-					if (strcmp ((*sptr)->channel, news->channel) == 0)
+					if (strcmp ((*sptrptr)->channel, news->channel) == 0)
 					{
 						log_info("Replacing stream '%s'", news->channel);
-						news->next = (*sptr)->next;
-						(*sptr)->next = NULL;
-						config_cleanup_stream (*sptr);
-						*sptr = news;
+						news->next = (*sptrptr)->next;
+						(*sptrptr)->next = NULL;
+						config_cleanup_stream (*sptrptr);
+						*sptrptr = news;
 						break;
 					}
-					sptr = &((*sptr)->next);
+					sptrptr = &((*sptrptr)->next);
 				}
-				if (*sptr == NULL)
+				if (*sptrptr == NULL)
 				{
 					log_info("Adding stream '%s'", news->channel);
-					*sptr = news;
+					*sptrptr = news;
 				}
 			}
 			else BADTOKEN;

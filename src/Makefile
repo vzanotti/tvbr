@@ -1,6 +1,7 @@
-CC     = gcc
-CFLAGS = -fstrict-aliasing -Wall
-IFLAGS = -g root -o root
+CC      = gcc
+CFLAGS  = -O2 -fstrict-aliasing -funsigned-char
+CFLAGS += -Wall -Wundef -Wshadow -Wunused -Wuninitialized
+IFLAGS  = -g root -o root
 
 OUT       = dump_sap dump_udp relay tvbr tvbr-unicast-client tvbr-unicast-server
 COMMON    = udpsocket.o
@@ -19,10 +20,10 @@ endif
 all: $(COMMON) $(OUT)
 
 dump_sap: dump_sap.c $(COMMON)
-	$(CC) $(CFLAGS) -o $@ -lz $< $(COMMON)
+	$(CC) $(CFLAGS) -o $@ $< $(COMMON) -lz
 
 tvbr: tvbr.c tvbr-stream.o tvbr-dvb.o tvbr-sap.o tvbr-config.o $(COMMON)
-	$(CC) $(CFLAGS) -o $@ -lpthread $< $(COMMON) tvbr-stream.o tvbr-dvb.o tvbr-sap.o tvbr-config.o
+	$(CC) $(CFLAGS) -o $@ $< $(COMMON) tvbr-stream.o tvbr-dvb.o tvbr-sap.o tvbr-config.o -lpthread
 
 tvbr-unicast-client: tvbr-unicast-client.c tvbr-unicast-ipc.o $(COMMON)
 	$(CC) $(CFLAGS) -o $@ $< $(COMMON) tvbr-unicast-ipc.o

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * tvbr-unicast-server.c :  TV-Unicaster Control
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: tvbr-unicast-server.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -329,7 +329,7 @@ int load_config (const char *config_file)
 		}
 		if (strlen(buffer) >= CONFIG_BUFFER_SIZE - 1)
 		{
-			log_error ("Line length exceeded maximum (%d > %d), aborting configuration loading", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
+			log_error ("Line length exceeded maximum (%zu > %d), aborting configuration loading", strlen(buffer), CONFIG_BUFFER_SIZE - 2);
 			fclose (fd);
 			return -1;
 		}
@@ -589,7 +589,7 @@ int load_config (const char *config_file)
 				{
 					IFTOKEN("ip")
 					{
-						struct in_addr addr;
+						struct in_addr parsed_addr;
 						char *maskptr;
 						NEXTOKEN;
 						IFMISSTOK("ip");
@@ -613,13 +613,13 @@ int load_config (const char *config_file)
 						acl->mask = (0xffffffff << (32-masklen)) & 0xffffffff;
 
 						/* IP */
-						if (inet_aton(ptr, &addr) == 0)
+						if (inet_aton(ptr, &parsed_addr) == 0)
 						{
 							log_error ("Invalid ip/mask for 'add acl' at line %d", line);
 							fclose (fd);
 							return -1;
 						}
-						acl->ip = addr.s_addr;
+						acl->ip = parsed_addr.s_addr;
 					}
 					else IFTOKEN("access-groups")
 					{
@@ -799,7 +799,7 @@ int main (int argc, char **argv)
 	int i;
 
 	struct sockaddr_un ipc_server;
-	ipc_packet ipc_packet;
+	ipc_packet ipc_pkt;
 	unsigned char ipc_buffer[IPC_BUFFER];
 	int ipc_read;
 
@@ -1040,9 +1040,9 @@ int main (int argc, char **argv)
 
 					if (ipc_read > 0)
 					{
-						if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_packet))
+						if (ipc_decode(ipc_buffer, (unsigned int)ipc_read, &ipc_pkt))
 						{
-							switch (ipc_packet.headers.type)
+							switch (ipc_pkt.headers.type)
 							{
 								case IPC_NOOP:
 									break;
@@ -1057,7 +1057,6 @@ int main (int argc, char **argv)
 
 								case IPC_ACCESS_REQUEST:
 								{
-									struct in_addr addr;
 									uint32_t host_ip;
 									char *query_ip;
 									uint32_t query_bw;
@@ -1065,16 +1064,19 @@ int main (int argc, char **argv)
 									int u, j, a, g, c;
 									int allowed = 0;
 
-									host_ip = ipc_packet.payload.access_request.host_ip;
+									host_ip = ipc_pkt.payload.access_request.host_ip;
 
-									addr.s_addr = host_ip;
-									log_debug("AccessRequest for ip=%s, url=%s",
-											inet_ntoa(addr), ipc_packet.payload.access_request.url);
+									{
+                    struct in_addr log_addr;
+                    log_addr.s_addr = host_ip;
+                    log_debug("AccessRequest for ip=%s, url=%s",
+                        inet_ntoa(log_addr), ipc_pkt.payload.access_request.url);
+									}
 
 									/* url -> IP conversion */
 									for (u = 0; u < unicast_channel_count; u++)
 									{
-										if (strncasecmp((char *)ipc_packet.payload.access_request.url, (char *)unicast_channels[u].url, IPC_URL_LENGTH) == 0)
+										if (strncasecmp((char *)ipc_pkt.payload.access_request.url, (char *)unicast_channels[u].url, IPC_URL_LENGTH) == 0)
 										{
 											break;
 										}
@@ -1083,21 +1085,21 @@ int main (int argc, char **argv)
 									if (u == unicast_channel_count)
 									{
 										const char *denial = "Requested channel was not found in the database.";
-										if (!ipc_encode_access_deny(&ipc_packet, ipc_buffer, denial, 404))
+										if (!ipc_encode_access_deny(&ipc_pkt, ipc_buffer, denial, 404))
 										{
 											log_error("Unable to build AccessDeny packet, aborting");
 											cleanup_handler ();
 											exit (0);
 										}
-										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+										if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 										{
 											terminate_socket (i);
 										}
 										else
 										{
-											struct in_addr addr;
-											addr.s_addr = ipc_ips[i];
-											log_info("sent AccessDeny for url=%s, ip=%s (not found)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"));
+											struct in_addr log_addr;
+											log_addr.s_addr = ipc_ips[i];
+											log_info("sent AccessDeny for url=%s, ip=%s (not found)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"));
 										}
 										break;
 									}
@@ -1106,7 +1108,7 @@ int main (int argc, char **argv)
 									query_port = unicast_channels[u].port;
 									query_bw = unicast_channels[u].bandwidth;
 
-									strncpy(ipc_urls[i], (char *) ipc_packet.payload.access_request.url, IPC_URL_LENGTH);
+									strncpy(ipc_urls[i], (char *) ipc_pkt.payload.access_request.url, IPC_URL_LENGTH);
 									ipc_ips[i] = host_ip;
 
 									/* Access control */
@@ -1121,21 +1123,21 @@ int main (int argc, char **argv)
 										{
 											const char *denial = "Your IP is already receiving one channel; you can only receive one channel at a time.";
 											int socket = (disconnect ? j : i);
-											if (!ipc_encode_access_deny(&ipc_packet, ipc_buffer, denial, 403))
+											if (!ipc_encode_access_deny(&ipc_pkt, ipc_buffer, denial, 403))
 											{
 												log_error("Unable to build AccessDeny packet, aborting");
 												cleanup_handler ();
 												exit (0);
 											}
-											if (send(ipc_sockets[socket], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+											if (send(ipc_sockets[socket], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 											{
 												terminate_socket_noacl (socket);
 											}
 											else
 											{
-												struct in_addr addr;
-												addr.s_addr = ipc_ips[socket];
-												log_info("sent AccessDeny for url=%s, ip=%s (one channel per IP)", ipc_urls[socket], (ipc_ips[socket] > 0 ? inet_ntoa(addr) : "?"));
+												struct in_addr log_addr;
+												log_addr.s_addr = ipc_ips[socket];
+												log_info("sent AccessDeny for url=%s, ip=%s (one channel per IP)", ipc_urls[socket], (ipc_ips[socket] > 0 ? inet_ntoa(log_addr) : "?"));
 											}
 											if (!disconnect)
 											{
@@ -1187,24 +1189,24 @@ int main (int argc, char **argv)
 												denial = "Too much channels are currently streamed on the network; please ask for a less bandwidth consuming channel, or try again later.";
 												break;
 										}
-										if (!ipc_encode_access_deny(&ipc_packet, ipc_buffer, denial, 403))
+										if (!ipc_encode_access_deny(&ipc_pkt, ipc_buffer, denial, 403))
 										{
 											log_error("Unable to build AccessDeny packet, aborting");
 											cleanup_handler ();
 											exit (0);
 										}
-										if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+										if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 										{
 											terminate_socket (i);
 										}
 										else
 										{
-											struct in_addr addr;
-											addr.s_addr = ipc_ips[i];
+											struct in_addr log_addr;
+											log_addr.s_addr = ipc_ips[i];
 											if (allowed == 0x01)
-												log_info("sent AccessDeny for url=%s, ip=%s (bandwidth limit)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"));
+												log_info("sent AccessDeny for url=%s, ip=%s (bandwidth limit)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"));
 											else
-												log_info("sent AccessDeny for url=%s, ip=%s (channel denied)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"));
+												log_info("sent AccessDeny for url=%s, ip=%s (channel denied)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"));
 										}
 										break;
 									}
@@ -1212,22 +1214,22 @@ int main (int argc, char **argv)
 									/* Sending back Access Accept */
 									compute_acl_limits ();
 
-									if (!ipc_encode_access_accept(&ipc_packet, ipc_buffer, query_ip, query_port))
+									if (!ipc_encode_access_accept(&ipc_pkt, ipc_buffer, query_ip, query_port))
 									{
 										log_error("Unable to build AccessAccept packet, aborting");
 										cleanup_handler ();
 										exit (0);
 									}
 
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 									{
 										terminate_socket (i);
 									}
 									else
 									{
-										struct in_addr addr;
-										addr.s_addr = ipc_ips[i];
-										log_info("sent AccessAccept for url=%s, ip=%s", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"));
+										struct in_addr log_addr;
+										log_addr.s_addr = ipc_ips[i];
+										log_info("sent AccessAccept for url=%s, ip=%s", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"));
 									}
 									break;
 								}
@@ -1236,23 +1238,25 @@ int main (int argc, char **argv)
 								{
 									short int urllist[UNICAST_MAX_CHANNELS];
 									int a, g, c;
-									uint32_t ip = ipc_packet.payload.request_list.host_ip;
-									struct in_addr addr;
+									uint32_t ip = ipc_pkt.payload.request_list.host_ip;
 
-									addr.s_addr = ip;
-									log_debug("UrlList request for ip=%s", inet_ntoa(addr));
+									{
+                    struct in_addr log_addr;
+                    log_addr.s_addr = ip;
+                    log_debug("UrlList request for ip=%s", inet_ntoa(log_addr));
+									}
 
 									memset (urllist, 0, sizeof(urllist));
 
 									for (a = 0; a < unicast_acl_count; a++)
 									{
-										if ((ipc_packet.payload.request_list.host_ip & unicast_acls[a].mask) == unicast_acls[a].ip)
+										if ((ipc_pkt.payload.request_list.host_ip & unicast_acls[a].mask) == unicast_acls[a].ip)
 										{
 											for (g = 0; g < unicast_acls[a].access_count; g++)
 											{
 												for (c = 0; c < unicast_acls[a].access[g]->channel_count; c++)
 												{
-													int pos = ((int)(unicast_acls[a].access[g]->channels[c]) - (int)unicast_channels) / sizeof(unicast_url);
+													size_t pos = ((size_t)(unicast_acls[a].access[g]->channels[c]) - (size_t)unicast_channels) / sizeof(unicast_url);
 													if (pos < 0 || pos > UNICAST_MAX_CHANNELS)
 													{
 														log_error("Bad channel position found in UrlList, aborting");
@@ -1265,7 +1269,7 @@ int main (int argc, char **argv)
 										}
 									}
 
-									if (ipc_encode_list_answer_url (&ipc_packet) < 0)
+									if (ipc_encode_list_answer_url (&ipc_pkt) < 0)
 									{
 										log_error("Unable to build UrlList packet, aborting");
 										cleanup_handler ();
@@ -1277,28 +1281,28 @@ int main (int argc, char **argv)
 										if (urllist[c] > 0)
 										{
 											ipc_encode_urllist_add (
-													&ipc_packet, ipc_buffer,
+													&ipc_pkt, ipc_buffer,
 													unicast_channels[c].url,
 													unicast_channels[c].ip,
 													unicast_channels[c].port);
 										}
 									}
 
-									if (ipc_encode_answer(&ipc_packet, ipc_buffer, ip) < 0)
+									if (ipc_encode_answer(&ipc_pkt, ipc_buffer, ip) < 0)
 									{
 										log_error("Unable to build UrlList packet, aborting");
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 									{
 										terminate_socket (i);
 									}
 									else
 									{
-										struct in_addr addr;
-										addr.s_addr = ipc_ips[i];
-										log_info("sent UrlList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"), ipc_packet.list_length);
+										struct in_addr log_addr;
+										log_addr.s_addr = ipc_ips[i];
+										log_info("sent UrlList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"), ipc_pkt.list_length);
 									}
 									break;
 								}
@@ -1307,21 +1311,23 @@ int main (int argc, char **argv)
 								{
 									short int bwlist[UNICAST_MAX_GROUPS];
 									int a, g, c;
-									uint32_t ip = ipc_packet.payload.request_list.host_ip;
-									struct in_addr addr;
+									uint32_t ip = ipc_pkt.payload.request_list.host_ip;
 
-									addr.s_addr = ip;
-									log_debug("BwGroupList request for ip=%s", inet_ntoa(addr));
+									{
+                    struct in_addr log_addr;
+                    log_addr.s_addr = ip;
+                    log_debug("BwGroupList request for ip=%s", inet_ntoa(log_addr));
+									}
 
 									memset (bwlist, 0, sizeof(bwlist));
 
 									for (a = 0; a < unicast_acl_count; a++)
 									{
-										if ((ipc_packet.payload.request_list.host_ip & unicast_acls[a].mask) == unicast_acls[a].ip)
+										if ((ipc_pkt.payload.request_list.host_ip & unicast_acls[a].mask) == unicast_acls[a].ip)
 										{
 											for (g = 0; g < unicast_acls[a].bw_count; g++)
 											{
-												int pos = ((int)(unicast_acls[a].bw[g]) - (int)unicast_bw) / sizeof(unicast_bwgroup);
+											  size_t pos = ((size_t)(unicast_acls[a].bw[g]) - (size_t)unicast_bw) / sizeof(unicast_bwgroup);
 												if (pos < 0 || pos > UNICAST_MAX_GROUPS)
 												{
 													log_error("Bad bwgroup position found in BwgroupList, aborting");
@@ -1333,7 +1339,7 @@ int main (int argc, char **argv)
 										}
 									}
 
-									if (ipc_encode_list_answer_bw (&ipc_packet) < 0)
+									if (ipc_encode_list_answer_bw (&ipc_pkt) < 0)
 									{
 										log_error("Unable to build BwGroupList packet, aborting");
 										cleanup_handler ();
@@ -1345,7 +1351,7 @@ int main (int argc, char **argv)
 										if (bwlist[c] > 0)
 										{
 											ipc_encode_bwlist_add (
-													&ipc_packet, ipc_buffer,
+													&ipc_pkt, ipc_buffer,
 													unicast_bw[c].name,
 													unicast_bw[c].max_bw,
 													unicast_bw[c].cur_bw,
@@ -1354,21 +1360,21 @@ int main (int argc, char **argv)
 										}
 									}
 
-									if (ipc_encode_answer(&ipc_packet, ipc_buffer, ip) < 0)
+									if (ipc_encode_answer(&ipc_pkt, ipc_buffer, ip) < 0)
 									{
 										log_error("Unable to build BwGroupList packet, aborting");
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 									{
 										terminate_socket (i);
 									}
 									else
 									{
-										struct in_addr addr;
-										addr.s_addr = ipc_ips[i];
-										log_info("sent BwGroupList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"), ipc_packet.list_length);
+										struct in_addr log_addr;
+										log_addr.s_addr = ipc_ips[i];
+										log_info("sent BwGroupList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"), ipc_pkt.list_length);
 									}
 									break;
 								}
@@ -1376,13 +1382,15 @@ int main (int argc, char **argv)
 								case IPC_CONNECTION_GET:
 								{
 									int c;
-									uint32_t ip = ipc_packet.payload.request_list.host_ip;
-									struct in_addr addr;
+									uint32_t ip = ipc_pkt.payload.request_list.host_ip;
 
-									addr.s_addr = ip;
-									log_debug("ConnectionList request for ip=%s", inet_ntoa(addr));
+									{
+                    struct in_addr log_addr;
+                    log_addr.s_addr = ip;
+                    log_debug("ConnectionList request for ip=%s", inet_ntoa(log_addr));
+									}
 
-									if (ipc_encode_list_answer_conn (&ipc_packet) < 0)
+									if (ipc_encode_list_answer_conn (&ipc_pkt) < 0)
 									{
 										log_error("Unable to build ConnectionList packet, aborting");
 										cleanup_handler ();
@@ -1396,24 +1404,24 @@ int main (int argc, char **argv)
 										if (ipc_urls[c][0] == '\0')
 											continue;
 
-										ipc_encode_connlist_add (&ipc_packet, ipc_buffer, ipc_ips[c], ipc_urls[c], ipc_start[c].tv_sec);
+										ipc_encode_connlist_add (&ipc_pkt, ipc_buffer, ipc_ips[c], ipc_urls[c], ipc_start[c].tv_sec);
 									}
 
-									if (ipc_encode_answer(&ipc_packet, ipc_buffer, ip) < 0)
+									if (ipc_encode_answer(&ipc_pkt, ipc_buffer, ip) < 0)
 									{
 										log_error("Unable to build ConnectionList packet, aborting");
 										cleanup_handler ();
 										exit (0);
 									}
-									if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+									if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 									{
 										terminate_socket (i);
 									}
 									else
 									{
-										struct in_addr addr;
-										addr.s_addr = ipc_ips[i];
-										log_info("sent ConnectionList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(addr) : "?"), ipc_packet.list_length);
+										struct in_addr log_addr;
+										log_addr.s_addr = ipc_ips[i];
+										log_info("sent ConnectionList for url=%s, ip=%s (%d elements)", ipc_urls[i], (ipc_ips[i] > 0 ? inet_ntoa(log_addr) : "?"), ipc_pkt.list_length);
 									}
 									break;
 								}
@@ -1434,8 +1442,8 @@ int main (int argc, char **argv)
 			}
 			if (keepalive && ipc_sockets[i] > 0)
 			{
-				ipc_encode_noop (&ipc_packet, ipc_buffer);
-				if (send(ipc_sockets[i], ipc_buffer, ipc_packet.packet_length, MSG_NOSIGNAL) != (int)ipc_packet.packet_length)
+				ipc_encode_noop (&ipc_pkt, ipc_buffer);
+				if (send(ipc_sockets[i], ipc_buffer, ipc_pkt.packet_length, MSG_NOSIGNAL) != (int)ipc_pkt.packet_length)
 				{
 					terminate_socket (i);
 				}

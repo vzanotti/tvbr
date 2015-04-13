@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dump_dup.c :  Dump UDP multicast stream
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: dump_udp.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -263,7 +263,7 @@ int main (int argc, char** argv)
 		struct in_addr addr;
 		int port;
 
-		/* Préparation des valeurs */
+		/* Prï¿½paration des valeurs */
 		if (colon == NULL)
 		{
 			log_error("stream `%s' is invalid (not in `A.B.C.D:E' form)", argv[i]);
@@ -277,7 +277,7 @@ int main (int argc, char** argv)
 			return 1;
 		}
 
-		ip = strndup(argv[i], ((int) colon - (int) argv[i]));
+		ip = strndup(argv[i], colon - argv[i]);
 		if (inet_aton(ip, &addr) == 0)
 		{
 			log_error("stream `%s' is invalid (not in `A.B.C.D:E' form)", argv[i]);

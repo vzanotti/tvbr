@@ -1,7 +1,7 @@
 /*****************************************************************************
  * relay.c :  Relay an udp stream from a multicast addr to any addr.
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: relay.c 957 2007-02-22 15:57:41Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
@@ -151,7 +151,7 @@ int prepare_socket(char *uri, struct in_addr *laddr, struct sockaddr_in *sockadd
 	int port;
 	int sock;
 
-	/* Préparation des valeurs */
+	/* Prï¿½paration des valeurs */
 	if (colon == NULL)
 	{
 		log_error("stream `%s' is invalid (not in `A.B.C.D:E' form)", uri);
@@ -165,7 +165,7 @@ int prepare_socket(char *uri, struct in_addr *laddr, struct sockaddr_in *sockadd
 		return -1;
 	}
 
-	ip = strndup(uri, ((int) colon - (int) uri));
+	ip = strndup(uri, colon - uri);
 	if (inet_aton(ip, &addr) == 0)
 	{
 		log_error("stream `%s' is invalid (not in `A.B.C.D:E' form)", uri);

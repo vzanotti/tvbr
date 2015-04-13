@@ -1,7 +1,7 @@
 /*****************************************************************************
  * socket.c :  UDP/Multicast socket helper
  *****************************************************************************
- * Copyright (C) 2006 Binet Réseau
+ * Copyright (C) 2006 Binet RÃ©seau
  * $Id: udpsocket.c 817 2006-11-01 23:33:08Z vinz2 $
  *
  * Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
