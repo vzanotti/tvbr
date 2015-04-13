@@ -1,0 +1,19 @@
+##
+## TVBR Channels config file
+##
+
+# French DVB-T multiplex 'R1' with public tv channels
+add transponder dvbt name R1 freq 586000 bandwidth 8MHz
+add channel transponder R1 name France2   group TNT desc "2 - France 2"     pno 257  pids 110,120,130,140 minimal-mandatory-pids
+add channel transponder R1 name France4   group TNT desc "14 - France 4"    pno 259  pids 410,420,430,440 minimal-mandatory-pids
+add channel transponder R1 name France5   group TNT desc "5 - France 5"     pno 260  pids 310,320,330,340 minimal-mandatory-pids
+add channel transponder R1 name Arte      group TNT desc "7 - Arte"         pno 261  pids 510,520,530,531,540,541,542 minimal-mandatory-pids
+add channel transponder R1 name LCP       group TNT desc "13 - LCP"         pno 262  pids 610,620,630,640 minimal-mandatory-pids
+add channel transponder R1 name France3   group TNT desc "3 - France 3"     pno 273  pids 210,220,230,240 minimal-mandatory-pids
+
+# French DVB-S multiplex with some radios (pmt-filtering is mandatory as the entire pmt stream advertises ~20 channels
+# (and hence costs ~50 kbit/s), and must be streamed with *each* channel (otherwise VLC won't be able to play the stream))
+add transponder dvbs name tp90 freq 12207 polarity v symbolrate 27500
+add channel transponder tp90 name FranceMusique  group Radios desc "R - France Musique"    media audio pno 8519 pids 1298,1901 pmt-filter 1298 no-mandatory-pids pmt-pcr-pid 1901
+add channel transponder tp90 name FIP            group Radios desc "R - FIP"               media audio pno 8520 pids 1298,1903 pmt-filter 1298 no-mandatory-pids pmt-pcr-pid 1903
+add channel transponder tp90 name FranceInfo     group Radios desc "R - France Info"       media audio pno 8521 pids 1298,1904 pmt-filter 1298 no-mandatory-pids pmt-pcr-pid 1904

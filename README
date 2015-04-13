@@ -1,0 +1,93 @@
+==
+== TVBR - TV&Radio streaming tools
+==
+== Authors: Vincent Zanotti <vincent.zanotti@m4x.org>
+==
+== License: GPL v2
+==
+== Ideas/code borrowed from:
+==	mumudvb-1.2-patch-17
+==	VLC-0.8.5
+==
+
+TVBR is a set of tools for streaming DVB-T & DVB-S tv/radios over UDP/IP.
+Those tools are:
+	tvbr: a dvb multicast streaming server
+	tvbr-unicast-*: a multicast-udp-stream to unicast-http gateway
+	dump_udp: an UDP dumper
+	dump_sap: an SAP dumper
+	relay: a multicast-udp to unicast/multicast-udp relay
+
+
+===
+===	tvbr
+===
+tvbr is the main tool of this packages.
+You'll find informations on how to configure 'tvbr' in docs/CONFIG.tvbr,
+docs/channels.conf-example and docs/streams.conf-example.
+
+tvbr' main usage is the streaming of multiple channels on a campus network.
+
+Features:
+	Stream transponder from 1 to 6 DVB-T or DVB-S cards, with multiple channels on each transponder
+	One ip/port pair for each stream
+	Auto-dispatching of streams on DVB cards (based on compatibility of the transponder of each stream)
+	SAP announcement of streams (with SAP cancellation packets on termination)
+	Three set of possible "mandatory pids" to send (all/minimal/none)
+	PMT-Filtering (in order to avoid sending bandwidth-consuming PMT stream advertising non-streamed channels)
+	Smart reload of config file on SIGHUP (only restarting streams modified by the new configuration)
+
+Usage: tvbr [-hvq] [-d <path/to/etc>] [-c <card>[,<card>[...]]] <hostname>
+	-v		Increase verbosity
+	-q		Decrease verbosity
+	-d <path>	Config dir (with streams.conf and channels.conf)
+	-c		List of DVB cards to use (default: each card can be used by tvbr)
+	<hostname>	'hostname' to use when parsing streams.conf
+
+===
+===	tvbr-unicast
+===
+tvbr-unicast is a one-way relay from UDP-multicast streams to http (hence unicast) streams.
+tvbr-unicast-client and tvbr-unicast-server communicate through an Unix socket.
+
+tvbr-unicast-client is the CGI client, executed by Apache (or any other compatible http daemon)
+tvbr-unicast-server is the authorization server which enforce the bandwidth policy
+
+
+IPC (docs/tvbr-unicast-ipc.php) is a PHP Class implementing the client/server IPC
+can be used to provide a dynamic information page, whose content depends on the host IP (see
+docs/tvbr-unicast-podcast.php, which provides an XML podcast with only the streams allowed for
+the IP requesting the page).
+
+Features:
+	Offers udp-multicast streams in unicast (useful for multicast-incompatible parts of the network)
+	Offering only allowed streams on a per-IP basis
+	Enforcing bandwidth policy on a per-IP / per-network basis
+
+Usage: tvbr-server [-hvq] -c <path/to/config>
+	-v		Increase verbosity
+	-q		Decrease verbosity
+	-c <file>	Configuration file (see docs/CONFIG.unicast)
+	-d		Disconnect the old streaming process before accepting a new streaming from the same IP
+			(workaround of an Apache process)
+
+Apache config snippet:
+	RewriteEngine On
+	RewriteRule ^/stream/ /home/tv/bin/tvbr-unicast-client [L]
+	<Directory /home/tv/bin>
+		Order deny,allow
+		Deny from all
+		Allow from 111.222.333.444
+		Options +ExecCGI
+		SetHandler cgi-script
+	</Directory>
+
+	This config will enable the unicast gateway only for 111.222.333.444. The mapping will done on path "/stream/"
+	(/stream/ is a *mandatory* choice; you must otherwise change src/tvbr-unicast-client.c).
+
+===
+=== dump_udp, dump_sap, relay
+===
+dump_udp is a UDP-multicast stream dumper
+dump_sap is a SAP dumper (output in csv/zsv/php 'serialize'/xml formats)
+relay is an UDP-multicast relay (multicast->multicast or multicast->unicast)

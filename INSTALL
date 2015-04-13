@@ -1,0 +1,11 @@
+1) cd src
+
+2) (optionnal) Edit the Makefile
+
+3) make
+
+4) (optionnal) make install
+
+5) (optionnal) You can use gentoo's init scripts in the bin dir
+
+6) Create your config files, start the tvbr binary, and *watch TV !* :)

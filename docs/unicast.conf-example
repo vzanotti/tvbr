@@ -1,0 +1,28 @@
+##
+## TVBR Unicast config file
+##
+
+# Radios
+add channel name r-francemusique url "radios/f-musique"   ip 239.255.42.128 port 1234 bw 40
+add channel name r-franceinfo    url "radios/f-info"      ip 239.255.42.129 port 1234 bw 40
+add channel name r-fip           url "radios/fip"         ip 239.255.42.134 port 1234 bw 40
+
+# TNT (French DVB-T)
+add channel name t-france2 url "tnt/france2" ip 239.255.42.11 port 1234 bw 5000
+add channel name t-france3 url "tnt/france3" ip 239.255.42.16 port 1234 bw 5000
+add channel name t-france5 url "tnt/france5" ip 239.255.42.13 port 1234 bw 5000
+add channel name t-arte    url "tnt/arte"    ip 239.255.42.14 port 1234 bw 5000
+add channel name t-lcp     url "tnt/lcp"     ip 239.255.42.15 port 1234 bw 5000
+
+# Access-groups
+add access-group name radios channels r-francemusique,r-franceinfo,r-fip
+add access-group name tnt-public channels t-france2,t-france3,t-france5,t-arte,t-lcp
+
+# BW Groups (the first one is for the campus bar, the second one for testing)
+add bw-group name bataclan max-channels 1 max-bw 0
+add bw-group name test     max-channels 0 max-bw 6000
+
+# ACLs
+add acl ip IP.OF.A.TEST.MACHINE/32 access-groups radios,tnt-public,tnt-prive bw-groups test
+add acl ip IP.OF.THE.BAR/32        access-groups radios,tnt-public,tnt-prive bw-groups bataclan
+add acl ip OTHER.IP.OF.THE.BAR/32  access-groups radios,tnt-public,tnt-prive bw-groups bataclan

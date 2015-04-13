@@ -1,0 +1,49 @@
+##
+## channels.conf (contains channels description)
+##
+
+## Transponder configuration
+add transponder dvbt name <name> freq <freq> [bandwidth <bandwidth>] [modulation <modulation>] [transmode <transmode>] [guard <guard>] [coderate <crate>] [hierarchy <hierarchy>]
+add transponder dvbs name <name> freq <freq> polarity <polarity> symbolrate <srate>
+# Add a DVB-S or DVB-T transponder:
+#	<name>		Transponder config name
+#	<freq>		Transponder frequency (in KHz)
+# For DVB-T:
+#	<bandwidth>		DVB-T bandwidth ('8MHz', '7MHz', '6MHz', or 'auto'; default '8MHz')
+#	<modulation>	DVB-T modulation ('qpsk', 'qam16', 'qam32', 'qam64', 'qam128', 'qam256', 'auto'; default 'auto')
+#	<transmode>		DVB-T transmission mode ('2k', '8k', 'auto'; default 'auto')
+#	<guard>		DVB-T guard interval ('1/32', '1/16', '1/4', 'auto'; default 'auto')
+#	<coderate>		DVB-T coderate ('none', '1/2', '2/3', '3/4', '4/5', '5/6', '6/7', '7/8', '8/9', 'auto'; default 'auto')
+# For DVB-S:
+#	<polarity>		DVB-S signal polarity ('h' or 'v')
+#	<srate>		DVB-S symbol rate in kSymbol/s
+
+## Channel configuration
+add channel name <name> transponder <transponder> [group <groupname>] [desc "<desc>"] [media <media>] pno <pno> pids <pid>[,<pid>[...]] [pmt-filter <pmtpid>] [no-mandatory-pids|minimal-mandatory-pids|all-mandatory-pids]
+# Add a new channel to a transponder
+#	<name>		Channel config name
+#	<transponder>	Config name of the transponder
+#	<groupname>		Channel group name (used as group in SAP announcements)
+#	<desc>		Channel description (used as channel title in SAP announcements)
+#	<media>		Channel media type ('audio', 'video'; default video) (used in SAP announcements)
+#	<pno>			DVB Program number (use dvbsnoop on pmt pid to discover it)
+#	<pid>			DVB Pid to be streamed with the channel
+#	<pmtpid>		PID of the PMT (PID advertising channels and their main pids of a common channel group; pmt-filter
+#				only keeps records matching a pid streamed in the current channel)
+#	no-mandatory-pids		Only stream configured pids
+#	minimal-mandatory-pids	Stream configured pids plus *really* mandatory pids (PAT/EIT/TDT)
+#	all-mandatory-pids	Stream configured pids plus mandatory pids (PAT/EIT/TDT and NIT/SDT)
+
+
+##
+## streams.conf (contains streams definition)
+##
+
+add stream host <hostname> channel <channel> dst <ip> [port <port>] [ttl <ttl>]
+# Stream a channel
+#	<hostname>		Hostname reponsible of the streaming (use with <hostname> on tvbr command line)
+#				Enable usage of an unique channels.conf/streams.conf for a 'cluster' of streaming servers
+#	<channel>		Channel config name (as defined in channels.conf)
+#	<ip>			Destination IP for the UDP stream (multicast address)
+#	<port>		Destination port for the UDP stream (default port: 1234)
+#	<ttl>			TTL of UDP packets (default: 10)

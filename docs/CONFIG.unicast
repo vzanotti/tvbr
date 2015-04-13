@@ -1,0 +1,34 @@
+##
+## Unicast.conf (ACLs for the unicast gateway)
+##
+
+## URL configuration
+add channel name <name> url <url> ip <ip> port <port> bw <bandwidth>
+# Add a new url<->stream binding
+#	<name>	Config name of the channel
+#	<url>		Path on the server (example: radios/rtl)
+#	<ip>/<port> IP/Port of the multicast UDP stream
+#	<bandwidth> Theorical bandwidth (in kbit/s, used for bandwidth policy enforcement)
+
+## Access Group
+add access-group name <name> channels <channel>[,<channel>[...]]
+# Create a new group of channels/urls
+#	<name>	Name of the group
+#	<channel>	Name of a channel (in fact the '<url>' of the previous command)
+
+## BW Group
+add bw-group name <name> [max-bw <bandwidth>] [max-channels <channels>]
+# Create a new policy group
+#	<name>	Name of the group
+#	<bandwidth>	Maximum bandwidth (in kbit/s, calculated with 'add channel' figures) (0 = no limit)
+#	<channels>	Maximum number of streamed channels (be aware that *anyway* at most one stream is allowed for every single IP)
+#			(0 = no limit)
+
+## ACL
+add acl ip <ip>/<masklen> access-groups <access-group>[,<access-group>[...]] bw-groups <bw-group>[,<bw-group>[...]]
+# Create a mapping IP-URLs-Policies
+# An IP can get the stream if and only if the corresponding url is in *at least one* of its access group,
+# and is in *all* its policies groups
+#	<ip>/<masklen>	IPs concerned by the ACL
+#	<access-group>	Access group name
+#	<bw-group>		Policy/Bandwidth group name

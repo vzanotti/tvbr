@@ -1,0 +1,15 @@
+##
+## TVBR Streams config
+##
+
+# R1 (France2, France3, France5, ARTE, LCP) -> skinwel
+add stream host skinwel channel France2 dst 239.255.42.11 ttl 4
+add stream host skinwel channel France3 dst 239.255.42.16 ttl 4
+add stream host skinwel channel France5 dst 239.255.42.13 ttl 4
+add stream host skinwel channel Arte    dst 239.255.42.14 ttl 4
+add stream host skinwel channel LCP     dst 239.255.42.15 ttl 4
+
+# TP90 (Radios) -> pellwel
+add stream host pellwel channel FranceMusique  dst 239.255.42.128 ttl 4
+add stream host pellwel channel FIP            dst 239.255.42.134 ttl 4
+add stream host pellwel channel FranceInfo     dst 239.255.42.129 ttl 4
